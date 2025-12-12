@@ -1,0 +1,133 @@
+.finny-mascot {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.finny-mascot-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 0 20px rgba(255, 107, 53, 0.3));
+    transition: filter var(--transition-base);
+}
+
+.finny-mascot:hover .finny-mascot-image {
+    filter: drop-shadow(0 0 30px rgba(255, 107, 53, 0.5));
+}
+
+/* Size variants */
+.finny-mascot.size-sm {
+    width: 60px;
+    height: 60px;
+}
+
+.finny-mascot.size-md {
+    width: 120px;
+    height: 120px;
+}
+
+.finny-mascot.size-lg {
+    width: 200px;
+    height: 200px;
+}
+
+.finny-mascot.size-xl {
+    width: 280px;
+    height: 280px;
+}
+
+/* Glow ring behind mascot */
+.finny-mascot::before {
+    content: '';
+    position: absolute;
+    inset: -10%;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+            rgba(255, 107, 53, 0.15) 0%,
+            transparent 70%);
+    animation: float 4s ease-in-out infinite;
+    z-index: -1;
+}
+
+/* Status-based animations */
+.finny-mascot.status-idle .finny-mascot-image {
+    animation: mascot-idle 3s ease-in-out infinite;
+}
+
+.finny-mascot.status-processing .finny-mascot-image {
+    animation: mascot-processing 0.8s ease-in-out infinite;
+}
+
+.finny-mascot.status-success .finny-mascot-image {
+    animation: mascot-success 0.6s ease-out;
+}
+
+@keyframes mascot-idle {
+
+    0%,
+    100% {
+        transform: translateY(0) rotate(0deg);
+    }
+
+    25% {
+        transform: translateY(-5px) rotate(-2deg);
+    }
+
+    75% {
+        transform: translateY(-3px) rotate(2deg);
+    }
+}
+
+@keyframes mascot-processing {
+
+    0%,
+    100% {
+        transform: scale(1) rotate(0deg);
+    }
+
+    50% {
+        transform: scale(1.05) rotate(3deg);
+    }
+}
+
+@keyframes mascot-success {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Speech bubble */
+.finny-speech-bubble {
+    position: absolute;
+    top: -20px;
+    right: -100px;
+    background: var(--color-glass);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--color-glass-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+    white-space: nowrap;
+    box-shadow: var(--glow-primary);
+}
+
+.finny-speech-bubble::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-right-color: var(--color-glass-border);
+}

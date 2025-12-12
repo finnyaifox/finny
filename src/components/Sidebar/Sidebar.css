@@ -1,0 +1,311 @@
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+}
+
+.sidebar-card {
+    background: var(--color-glass);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--color-glass-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    transition: all var(--transition-base);
+}
+
+.sidebar-card:hover {
+    border-color: var(--color-primary);
+}
+
+/* Progress Section */
+.progress-section {
+    flex-shrink: 0;
+}
+
+.sidebar-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-md);
+}
+
+.sidebar-card-title {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.sidebar-card-title svg {
+    width: 20px;
+    height: 20px;
+    color: var(--color-primary);
+}
+
+.progress-stats {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-sm);
+}
+
+.progress-label {
+    font-size: var(--font-size-base);
+    color: var(--color-text-secondary);
+}
+
+.progress-value {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.progress-bar-container {
+    height: 8px;
+    background: var(--color-bg-deep);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
+    border-radius: var(--radius-full);
+    transition: width 0.5s ease-out;
+    box-shadow: 0 0 10px rgba(255, 126, 80, 0.5);
+}
+
+/* Field List Section - KORRIGIERT MIT SCROLLING */
+.field-list-section {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.field-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: var(--spacing-xs);
+    max-height: 100%;
+}
+
+/* Custom scrollbar for field list */
+.field-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.field-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.field-list::-webkit-scrollbar-thumb {
+    background: var(--color-glass-border);
+    border-radius: var(--radius-full);
+}
+
+.field-list::-webkit-scrollbar-thumb:hover {
+    background: var(--color-primary);
+}
+
+/* Field Item */
+.field-item {
+    padding: var(--spacing-md);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-glass-border);
+    border-left: 3px solid transparent;
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
+    cursor: pointer;
+}
+
+.field-item:hover {
+    background: var(--color-glass-light);
+    border-left-color: var(--color-primary);
+}
+
+.field-item.filled {
+    border-left-color: var(--color-success);
+    background: rgba(45, 211, 111, 0.05);
+}
+
+.field-item.editing {
+    border-color: var(--color-primary);
+    box-shadow: var(--glow-primary);
+}
+
+.field-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-xs);
+}
+
+.field-item-name {
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    color: var(--color-text-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    flex: 1;
+}
+
+.field-type-icon {
+    font-size: var(--font-size-xs);
+}
+
+.field-item-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
+
+.field-item:hover .field-item-actions {
+    opacity: 1;
+}
+
+.field-action-btn {
+    padding: var(--spacing-xs);
+    background: var(--color-glass-light);
+    border: 1px solid var(--color-glass-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.field-action-btn:hover {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+.field-action-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.field-item-value {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    word-break: break-word;
+}
+
+.field-item-value.empty {
+    font-style: italic;
+    opacity: 0.5;
+}
+
+.field-item-input {
+    width: 100%;
+    padding: var(--spacing-sm);
+    background: var(--color-bg-deep);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    font-family: inherit;
+}
+
+.field-item-input:focus {
+    outline: none;
+    box-shadow: var(--glow-primary);
+}
+
+/* Field Type Specific Styling */
+.field-item.type-checkbox {
+    border-left-color: var(--color-secondary);
+}
+
+.field-item.type-gender {
+    border-left-color: var(--color-warning);
+}
+
+/* Field Legend */
+.field-legend {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-sm);
+    background: var(--color-bg-deep);
+    border-radius: var(--radius-md);
+}
+
+.field-legend-title {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.field-legend-items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.field-legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+}
+
+.field-legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+}
+
+.field-legend-color.text {
+    background: var(--color-primary);
+}
+
+.field-legend-color.checkbox {
+    background: var(--color-secondary);
+}
+
+.field-legend-color.gender {
+    background: var(--color-warning);
+}
+
+.field-legend-color.filled {
+    background: var(--color-success);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .sidebar {
+        max-height: 250px;
+    }
+
+    .field-list {
+        max-height: 150px;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        max-height: 200px;
+    }
+
+    .field-list {
+        max-height: 120px;
+    }
+}
