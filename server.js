@@ -12,7 +12,8 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // Serve index.html for any unknown paths (SPA fallback)
-app.get('*', (req, res) => {
+// Fix for Express 5: Use regex for catch-all route instead of '*' string which is no longer supported
+app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
