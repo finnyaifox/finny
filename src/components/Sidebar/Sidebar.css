@@ -152,13 +152,16 @@
 }
 
 .field-item-name {
-    font-size: var(--font-size-base);
+    font-size: var(--font-size-sm);
+    /* Reduced from base */
     font-weight: 500;
     color: var(--color-text-primary);
     display: flex;
     align-items: center;
     gap: var(--spacing-xs);
     flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .field-type-icon {
@@ -290,22 +293,15 @@
 }
 
 /* Responsive */
+/* Responsive */
 @media (max-width: 1024px) {
     .sidebar {
-        max-height: 250px;
+        height: auto;
+        min-height: 200px;
     }
 
     .field-list {
-        max-height: 150px;
-    }
-}
-
-@media (max-width: 768px) {
-    .sidebar {
-        max-height: 200px;
-    }
-
-    .field-list {
-        max-height: 120px;
+        max-height: 300px;
+        /* Give it a reasonable fixed height on mobile */
     }
 }

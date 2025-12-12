@@ -89,6 +89,9 @@ export async function sendMessage(messages, context) {
             max_tokens: 800, // ERHÖHT von 500 - verhindert Satz-Abbrüche
         };
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
         console.log('CometAPI request:', {
             model: MODEL,
             messageCount: requestBody.messages.length,
@@ -96,44 +99,55 @@ export async function sendMessage(messages, context) {
             max_tokens: requestBody.max_tokens
         });
 
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${API_KEY}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody),
-        });
-
-        console.log('CometAPI response status:', response.status);
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('❌ CometAPI error:', {
-                status: response.status,
-                error: errorData
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${API_KEY}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody),
+                signal: controller.signal
             });
-            throw new Error(errorData.error?.message || `CometAPI error: ${response.status}`);
+
+            clearTimeout(timeoutId);
+
+            console.log('CometAPI response status:', response.status);
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('❌ CometAPI error:', {
+                    status: response.status,
+                    error: errorData
+                });
+                throw new Error(errorData.error?.message || `CometAPI error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const content = data.choices[0].message.content;
+
+            // Extract any field values from the last user message
+            const lastUserMessage = messages[messages.length - 1];
+            let fieldUpdates = {};
+
+            if (lastUserMessage && lastUserMessage.role === 'user') {
+                fieldUpdates = extractFieldValues(lastUserMessage.content, context.fields, context.filledFields);
+                console.log('🔍 Auto-extracted field values:', fieldUpdates);
+            }
+
+            console.log('✅ Got AI response:', content.substring(0, 150) + '...');
+
+            return {
+                content,
+                fieldUpdates // Return extracted field values
+            };
+        } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                throw new Error('Zeitüberschreitung bei der Anfrage. Bitte versuche es erneut.');
+            }
+            throw error;
         }
-
-        const data = await response.json();
-        const content = data.choices[0].message.content;
-
-        // Extract any field values from the last user message
-        const lastUserMessage = messages[messages.length - 1];
-        let fieldUpdates = {};
-
-        if (lastUserMessage && lastUserMessage.role === 'user') {
-            fieldUpdates = extractFieldValues(lastUserMessage.content, context.fields, context.filledFields);
-            console.log('🔍 Auto-extracted field values:', fieldUpdates);
-        }
-
-        console.log('✅ Got AI response:', content.substring(0, 150) + '...');
-
-        return {
-            content,
-            fieldUpdates // Return extracted field values
-        };
     } catch (error) {
         console.error('❌ AI service error:', error);
         throw error;
