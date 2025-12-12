@@ -2,10 +2,10 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--color-bg-deep);
+  background: linear-gradient(135deg, #16181f 0%, #1f222b 50%, #282c38 100%);
 }
 
-/* Background Gradient Effect */
+/* Background Gradient Effect - HELLER */
 .app::before {
   content: '';
   position: fixed;
@@ -14,8 +14,8 @@
   right: 0;
   bottom: 0;
   background:
-    radial-gradient(ellipse at top right, rgba(255, 107, 53, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at bottom left, rgba(59, 130, 246, 0.06) 0%, transparent 50%);
+    radial-gradient(ellipse at top right, rgba(255, 133, 82, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom left, rgba(92, 159, 255, 0.12) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
 }
@@ -157,7 +157,7 @@
   width: 150px;
   height: 150px;
   object-fit: contain;
-  filter: drop-shadow(0 10px 30px rgba(255, 107, 53, 0.3));
+  filter: drop-shadow(0 10px 30px rgba(255, 133, 82, 0.4));
 }
 
 .upload-hero h2 {
@@ -171,7 +171,7 @@
   max-width: 400px;
 }
 
-/* Main Workspace Layout */
+/* Main Workspace Layout - MIT HELLEREN PANELS */
 .workspace {
   flex: 1;
   display: flex;
@@ -187,8 +187,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
-  overflow-y: auto;
-  max-height: 100%;
+  overflow: hidden;
+  background: var(--color-glass);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
 }
 
 .workspace-main {
@@ -197,6 +200,9 @@
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
+  background: var(--color-glass);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
 }
 
 /* Upload Modal */
@@ -209,12 +215,12 @@
   border-radius: var(--radius-xl);
 }
 
-/* Modal Backdrop (from Modal.css, adding here for completeness) */
+/* Modal Backdrop */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;

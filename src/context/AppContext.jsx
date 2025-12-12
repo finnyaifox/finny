@@ -289,104 +289,108 @@ export function AppProvider({ children }) {
             dispatch({ type: ACTIONS.SET_TYPING, payload: true });
 
             const context = {
-                const
-                allMessages = [
-                        ...state.messages,
-                        { role: 'user', content: text },
-                    ];
+                fileName: state.pdfFileName,
+                fields: state.fields,
+                filledFields: state.filledFields,
+            };
 
-                const response = await aiService.sendMessage(allMessages, context);
+            const allMessages = [
+                ...state.messages,
+                { role: 'user', content: text },
+            ];
 
-                // Auto-fill any detected field values
-                if(response.fieldUpdates && Object.keys(response.fieldUpdates).length > 0) {
-                    console.log('🎯 Auto-filling detected fields:', response.fieldUpdates);
-    Object.entries(response.fieldUpdates).forEach(([name, value]) => {
-        dispatch({ type: ACTIONS.UPDATE_FIELD, payload: { name, value } });
-    });
-}
+            const response = await aiService.sendMessage(allMessages, context);
 
-dispatch({ type: ACTIONS.SET_TYPING, payload: false });
-dispatch({
-    type: ACTIONS.ADD_MESSAGE,
-    payload: { role: 'assistant', content: response.content },
-});
+            // Auto-fill any detected field values
+            if (response.fieldUpdates && Object.keys(response.fieldUpdates).length > 0) {
+                console.log('🎯 Auto-filling detected fields:', response.fieldUpdates);
+                Object.entries(response.fieldUpdates).forEach(([name, value]) => {
+                    dispatch({ type: ACTIONS.UPDATE_FIELD, payload: { name, value } });
+                });
+            }
+
+            dispatch({ type: ACTIONS.SET_TYPING, payload: false });
+            dispatch({
+                type: ACTIONS.ADD_MESSAGE,
+                payload: { role: 'assistant', content: response.content },
+            });
 
         } catch (error) {
-    console.error('Send message error:', error);
-    dispatch({ type: ACTIONS.SET_TYPING, payload: false });
-    dispatch({ type: ACTIONS.SET_ERROR, payload: error.message });
-}
+            console.error('Send message error:', error);
+            dispatch({ type: ACTIONS.SET_TYPING, payload: false });
+            dispatch({ type: ACTIONS.SET_ERROR, payload: error.message });
+        }
     }, [state.messages, state.pdfFileName, state.fields, state.filledFields]);
 
-// Update a field value
-const updateField = useCallback((name, value) => {
-    dispatch({ type: ACTIONS.UPDATE_FIELD, payload: { name, value } });
-}, []);
+    // Update a field value
+    const updateField = useCallback((name, value) => {
+        dispatch({ type: ACTIONS.UPDATE_FIELD, payload: { name, value } });
+    }, []);
 
-// Generate filled PDF
-const generatePdf = useCallback(async () => {
-    try {
-        dispatch({ type: ACTIONS.SET_STATUS, payload: 'generating' });
+    // Generate filled PDF
+    const generatePdf = useCallback(async () => {
+        try {
+            dispatch({ type: ACTIONS.SET_STATUS, payload: 'generating' });
 
-        const context = {
-            fileName: state.pdfFileName,
-            fields: state.fields,
-            filledFields: state.filledFields,
-        };
+            const context = {
+                fileName: state.pdfFileName,
+                fields: state.fields,
+                filledFields: state.filledFields,
+            };
 
-        const { fields: filledFieldsArray } = await aiService.generateFilledJson(
-            state.messages,
-            context
-        );
+            const { fields: filledFieldsArray } = await aiService.generateFilledJson(
+                state.messages,
+                context
+            );
 
-        dispatch({ type: ACTIONS.SET_STATUS, payload: 'filling' });
-        const { url } = await pdfcoService.fillPdf(state.pdfUrl, filledFieldsArray);
+            dispatch({ type: ACTIONS.SET_STATUS, payload: 'filling' });
+            const { url } = await pdfcoService.fillPdf(state.pdfUrl, filledFieldsArray);
 
-        dispatch({ type: ACTIONS.SET_FILLED_PDF, payload: url });
+            dispatch({ type: ACTIONS.SET_FILLED_PDF, payload: url });
 
-    } catch (error) {
-        console.error('Generate PDF error:', error);
-        dispatch({ type: ACTIONS.SET_ERROR, payload: error.message });
-    }
-}, [state.pdfUrl, state.pdfFileName, state.fields, state.filledFields, state.messages]);
+        } catch (error) {
+            console.error('Generate PDF error:', error);
+            dispatch({ type: ACTIONS.SET_ERROR, payload: error.message });
+        }
+    }, [state.pdfUrl, state.pdfFileName, state.fields, state.filledFields, state.messages]);
 
-// Get filled fields as array
-const getFilledFieldsArray = useCallback(() => {
-    return Object.entries(state.filledFields).map(([name, value]) => ({
-        name,
-        value,
-    }));
-}, [state.filledFields]);
+    // Get filled fields as array
+    const getFilledFieldsArray = useCallback(() => {
+        return Object.entries(state.filledFields).map(([name, value]) => ({
+            name,
+            value,
+        }));
+    }, [state.filledFields]);
 
-// Calculate progress
-const getProgress = useCallback(() => {
-    if (state.fields.length === 0) return 0;
-    const filledCount = Object.keys(state.filledFields).filter(k => state.filledFields[k]).length;
-    return Math.round((filledCount / state.fields.length) * 100);
-}, [state.fields, state.filledFields]);
+    // Calculate progress
+    const getProgress = useCallback(() => {
+        if (state.fields.length === 0) return 0;
+        const filledCount = Object.keys(state.filledFields).filter(k => state.filledFields[k]).length;
+        return Math.round((filledCount / state.fields.length) * 100);
+    }, [state.fields, state.filledFields]);
 
-// Reset the session
-const resetSession = useCallback(() => {
-    dispatch({ type: ACTIONS.RESET });
-}, []);
+    // Reset the session
+    const resetSession = useCallback(() => {
+        dispatch({ type: ACTIONS.RESET });
+    }, []);
 
-const value = {
-    ...state,
-    uploadPdf,
-    sendMessage,
-    updateField,
-    generatePdf,
-    getFilledFieldsArray,
-    getProgress,
-    resetSession,
-    startDemo,
-    saveSession,
-    loadSession,
-    getSavedSessions,
-    deleteSession,
-};
+    const value = {
+        ...state,
+        uploadPdf,
+        sendMessage,
+        updateField,
+        generatePdf,
+        getFilledFieldsArray,
+        getProgress,
+        resetSession,
+        startDemo,
+        saveSession,
+        loadSession,
+        getSavedSessions,
+        deleteSession,
+    };
 
-return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+    return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 
 // Hook to use the context
