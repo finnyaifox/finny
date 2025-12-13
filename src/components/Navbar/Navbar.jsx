@@ -10,7 +10,7 @@ export default function Navbar({ currentPage, onNavigate, onUploadClick, status 
 
     const navItems = [
         { id: 'home', label: 'Startseite', icon: Home },
-        { id: 'assistant', label: 'PDF Assistent', icon: FileText },
+        { id: 'full-ai', label: 'PDF Assistent Full KI', icon: FileText },
         { id: 'features', label: 'Funktionen', icon: Info },
         { id: 'help', label: 'Hilfe', icon: HelpCircle },
     ];
@@ -97,6 +97,18 @@ export default function Navbar({ currentPage, onNavigate, onUploadClick, status 
                         <span>Anmelden</span>
                     </motion.button>
                 )}
+
+                <button
+                    className="navbar-theme-toggle"
+                    onClick={() => {
+                        document.body.classList.toggle('dark-mode');
+                        // Optional: Save preference to localStorage if desired in future
+                    }}
+                    title="Design umschalten"
+                >
+                    <div className="theme-icon-sun">☀️</div>
+                    <div className="theme-icon-moon">🌙</div>
+                </button>
 
                 <button
                     className="navbar-menu-toggle"
