@@ -271,6 +271,8 @@ export function AppProvider({ children }) {
 
         } catch (error) {
             console.error('Upload/Extract error:', error);
+            // CRITICAL FIX: Stop typing indicator on error
+            dispatch({ type: ACTIONS.SET_TYPING, payload: false });
             dispatch({ type: ACTIONS.SET_ERROR, payload: error.message });
         }
     }, []);

@@ -87,16 +87,23 @@
     flex: 1;
     min-height: 0;
     overflow: hidden;
+    /* User Requested Fix: Limit height and enforce scroll */
+    max-height: 400px;
+    display: flex;
+    flex-direction: column;
 }
 
 .fields-list {
     flex: 1;
     overflow-y: auto;
+    /* Enforce vertical scroll */
     overflow-x: hidden;
     padding-right: var(--spacing-xs);
     display: flex;
     flex-direction: column;
     gap: var(--spacing-sm);
+    /* Ensure content doesn't break out */
+    max-height: 100%;
 }
 
 /* Scrollbar styling for the list */

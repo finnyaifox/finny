@@ -124,6 +124,13 @@ export async function sendMessage(messages, context) {
             }
 
             const data = await response.json();
+
+            // Validate response structure
+            if (!data.choices || !data.choices.length || !data.choices[0].message) {
+                console.error('Invalid CometAPI response format:', data);
+                throw new Error('Ungültige Antwort von der KI (falsches Format).');
+            }
+
             const content = data.choices[0].message.content;
 
             // Extract any field values from the last user message
