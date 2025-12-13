@@ -260,7 +260,7 @@ export function AppProvider({ children }) {
             dispatch({ type: ACTIONS.SET_STATUS, payload: 'chatting' });
             dispatch({ type: ACTIONS.SET_TYPING, payload: true });
 
-            const context = { fileName, fields };
+            const context = { fileName, fields, filledFields: {} };
             const response = await aiService.startConversation(context);
 
             dispatch({ type: ACTIONS.SET_TYPING, payload: false });

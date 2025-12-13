@@ -45,7 +45,7 @@ Wenn alle Felder fertig: "Perfekt, alles ausgefüllt! 🎉 Möchtest du die Vors
 /**
  * Extract field values from user message - AUTO-FILL
  */
-function extractFieldValues(userMessage, fields, filledFields) {
+function extractFieldValues(userMessage, fields, filledFields = {}) {
     const updates = {};
     const message = userMessage.toLowerCase();
 
