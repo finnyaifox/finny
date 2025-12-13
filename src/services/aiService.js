@@ -119,15 +119,11 @@ export async function sendMessage(messages, context) {
                 throw new Error('Ungültige Antwort von der KI (falsches Format).');
             }
 
-            const content = data.choices[0].message.content;
-
-            // Extract any field values from the last user message
-            const lastUserMessage = messages[messages.length - 1];
-            let fieldUpdates = {};
-
-            if (lastUserMessage && lastUserMessage.role === 'user') {
-                fieldUpdates = extractFieldValues(lastUserMessage.content, context.fields, context.filledFields);
-                console.log('🔍 Auto-extracted field values:', fieldUpdates);
+            if (!content || content.trim() === '') {
+                console.warn('AI response was empty. Using fallback.');
+                if (content.length === 0) { // Double check it's strictly empty
+                    throw new Error('Die KI hat eine leere Antwort gesendet. Bitte versuche es noch einmal.');
+                }
             }
 
             console.log('✅ Got AI response:', content.substring(0, 150) + '...');
