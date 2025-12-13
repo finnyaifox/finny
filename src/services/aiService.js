@@ -80,12 +80,16 @@ export async function sendMessage(messages, context) {
         const requestBody = {
             model: MODEL,
             messages: [systemMessage, ...conversationMessages],
-            temperature: 0.5,
-            max_tokens: 1000, // Increased for safety
+            temperature: 0.35,          // Niedrig = präzise, konsistente Ausgabe
+            top_p: 0.95,                // 95% der besten Tokens - Ausgewogenheit
+            max_tokens: 600,            // 600 reicht für lange Erklärungen + JSON
+            frequency_penalty: 0.1,     // Vermeidet Wiederholungen
+            presence_penalty: 0.05,     // Ermutigt neue Konzepte (leicht)
+            // top_k: 50                // Optional: Not always supported by all CometAPI models, kept commented for safety unless verified
         };
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 35000); // 35 second timeout as requested
 
         console.log('CometAPI Request Body:', JSON.stringify(requestBody, null, 2));
 
