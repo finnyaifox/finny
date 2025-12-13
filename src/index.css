@@ -1,36 +1,45 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  /* Color Palette - HELLERES Design */
-  --color-bg-deep: #16181f;
-  --color-bg-card: #1f222b;
-  --color-bg-elevated: #282c38;
-  --color-glass: rgba(31, 34, 43, 0.9);
-  --color-glass-light: rgba(255, 255, 255, 0.12);
-  --color-glass-border: rgba(255, 255, 255, 0.2);
+  /* Color Palette - MODERN LIGHT THEME */
+  --color-bg-deep: #f4f6f9;
+  /* Light Blue-Grey Background */
+  --color-bg-card: #ffffff;
+  /* Pure White Cards */
+  --color-bg-elevated: #ffffff;
+  /* White for elevated elements too */
+  --color-glass: rgba(255, 255, 255, 0.95);
+  /* White Glass */
+  --color-glass-light: rgba(255, 133, 82, 0.08);
+  /* Slight Orange tint for interactions */
+  --color-glass-border: rgba(0, 0, 0, 0.08);
+  /* Subtle dark border */
 
-  /* Accent Colors - Hellerer Orange-Verlauf */
+  /* Accent Colors - Orange maintained */
   --color-primary: #ff8552;
   --color-primary-light: #ffb088;
-  --color-primary-dark: #ff6b35;
+  --color-primary-dark: #e06c3b;
   --color-secondary: #5c9fff;
   --color-secondary-light: #85b8ff;
-  --color-success: #3de27c;
-  --color-success-light: #6aec9f;
-  --color-warning: #ffcd1a;
-  --color-warning-light: #ffe050;
-  --color-error: #ff5a6b;
+  --color-success: #2ecc71;
+  --color-success-light: #58d68d;
+  --color-warning: #f1c40f;
+  --color-warning-light: #f4d03f;
+  --color-error: #e74c3c;
 
-  /* Text Colors - Heller */
-  --color-text-primary: #ffffff;
-  --color-text-secondary: #d4d4d9;
-  --color-text-muted: #9999a1;
+  /* Text Colors - Dark for Light Theme */
+  --color-text-primary: #2d3436;
+  /* Dark Grey/Black */
+  --color-text-secondary: #636e72;
+  /* Medium Grey */
+  --color-text-muted: #b2bec3;
+  /* Light Grey */
 
-  /* Glow Effects - Stärker sichtbar */
-  --glow-primary: 0 0 30px rgba(255, 133, 82, 0.6);
-  --glow-primary-intense: 0 0 40px rgba(255, 133, 82, 0.8);
-  --glow-secondary: 0 0 30px rgba(92, 159, 255, 0.6);
-  --glow-success: 0 0 25px rgba(61, 226, 124, 0.6);
+  /* Glow Effects - Subtler for Light Mode */
+  --glow-primary: 0 4px 15px rgba(255, 133, 82, 0.3);
+  --glow-primary-intense: 0 4px 25px rgba(255, 133, 82, 0.5);
+  --glow-secondary: 0 4px 15px rgba(92, 159, 255, 0.3);
+  --glow-success: 0 4px 15px rgba(46, 204, 113, 0.3);
 
   /* Spacing */
   --spacing-xs: 4px;

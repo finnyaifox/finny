@@ -2,7 +2,7 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #16181f 0%, #1f222b 50%, #282c38 100%);
+  background: var(--color-bg-deep);
 }
 
 /* Background Gradient Effect - HELLER */
@@ -229,36 +229,22 @@
 }
 
 /* Responsive Adjustments */
-@media (max-width: 1024px) {
-  .workspace {
-    flex-direction: column;
-    height: auto;
-    min-height: calc(100vh - 80px);
-    overflow-y: auto;
-    /* Allow scrolling on main container */
-  }
+max-height: none;
+/* Remove strict max-height */
+}
 
-  .workspace-sidebar {
-    width: 100%;
-    /* Let sidebar height be determined by content but limit it slightly */
-    height: auto;
-    flex-shrink: 0;
-    max-height: none;
-    /* Remove strict max-height */
-  }
+.workspace-main {
+  flex: 1;
+  min-height: 500px;
+  /* Give chat enough space */
+  width: 100%;
+  height: 600px;
+  /* Explicit height for mobile chat to work */
+}
 
-  .workspace-main {
-    flex: 1;
-    min-height: 500px;
-    /* Give chat enough space */
-    width: 100%;
-    height: 600px;
-    /* Explicit height for mobile chat to work */
-  }
-
-  .feature-grid-page {
-    grid-template-columns: 1fr;
-  }
+.feature-grid-page {
+  grid-template-columns: 1fr;
+}
 }
 
 @media (max-width: 768px) {
