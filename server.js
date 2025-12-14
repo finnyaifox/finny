@@ -452,7 +452,7 @@ app.use(express.static(path.join(__dirname, 'dist')));
 app.use(express.static(path.join(__dirname, 'public'))); // For full-ki-mode.html and assets
 
 // SPA Fallback: ALL unknown routes go to index.html (React App)
-app.get('*', (req, res) => {
+app.get(/.*/, (req, res) => {
     // Exception for specific standalone page if needed, but public static serves it first.
     // If the browser requests /full-ki-mode.html, express.static catches it.
     // If requests /foo implies React Router.
