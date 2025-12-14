@@ -107,7 +107,7 @@ export default function FullAIWorkspace() {
                 setFieldValues(prev => ({ ...prev, ...res.data.fieldUpdates }));
             }
 
-            if (res.data.action === 'completed') {
+            if (res.data.action === 'completed' || res.data.action === 'preview') {
                 handleFinish();
             }
 

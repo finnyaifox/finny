@@ -54,12 +54,9 @@ export async function sendMessage(messages, context) {
  * Start Conversation - Calls backend to init
  */
 export async function startConversation(context) {
-    // We just send an empty init message or the intro prompt prompt to kick it off on backend
-    const initialMessage = {
-        role: 'user',
-        content: `Starte Analyse für ${context.fileName}`
-    };
-    return sendMessage([initialMessage], context);
+    // Send empty messages array to trigger the backend's "Intro Logic" (userMsgCount === 0)
+    console.log('🚀 Triggering Conversation Init...');
+    return sendMessage([], context);
 }
 
 /**

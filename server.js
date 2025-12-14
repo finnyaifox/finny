@@ -104,10 +104,10 @@ app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
         env: {
-  comet: !!(process.env.COMET_API_KEY || process.env.VITE_COMET_API_KEY),
-  pdfco: !!(process.env.PDF_CO_API_KEY || process.env.VITE_PDF_CO_API_KEY),
-  mode: process.env.NODE_ENV
-}
+            comet: !!(process.env.COMET_API_KEY || process.env.VITE_COMET_API_KEY),
+            pdfco: !!(process.env.PDF_CO_API_KEY || process.env.VITE_PDF_CO_API_KEY),
+            mode: process.env.NODE_ENV
+        }
     });
 });
 
@@ -359,6 +359,33 @@ Kein Markdown, nur JSON.`;
             });
         }
 
+        // --- CASE: COMMANDS (Buttons/Keywords) ---
+        const lowerMsg = lastUserMsg.toLowerCase().trim();
+
+        // 1. SKIP / WEITER
+        if (['skip', 'weiter', 'überspringen', 'nächstes', 'next'].some(k => lowerMsg.includes(k))) {
+            // If we have a current field, mark it as skipped or empty
+            if (currentField) {
+                return res.json({
+                    success: true,
+                    content: `Okay, ich habe das Feld "${currentField.name}" übersprungen. Was ist mit dem nächsten?`,
+                    fieldUpdates: { [currentField.name]: "—" } // Mark as skipped
+                });
+            }
+        }
+
+        // 2. PREVIEW / VORSCHAU
+        if (['vorschau', 'preview', 'zeigen'].some(k => lowerMsg.includes(k))) {
+            return res.json({
+                success: true,
+                content: "Hier ist eine Vorschau deiner aktuellen Daten.",
+                action: 'preview' // Frontend should react to this
+            });
+        }
+
+        // 3. HELP (handled by AI usually, but we can intercept if needed)
+        // If "Hilfe" button sends exactly "Hilfe", the AI prompt instructions handle it.
+
         // --- CASE: ALL DONE ---
         if (!currentField && fields.length > 0) {
             return res.json({ success: true, content: "🎉 Das Formular ist komplett! Klicke auf 'Fertigstellen'.", action: 'completed' });
@@ -419,51 +446,51 @@ app.post('/api/fill-pdf', async (req, res) => {
         let targetUrl = pdfUrl;
 
         // VARIANT B: Upload Temp File to PDF.co first if needed
-if (!targetUrl && tempId) {
-    const filePath = path.join(UPLOAD_DIR, tempId);
-    if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, error: 'Original file lost' });
+        if (!targetUrl && tempId) {
+            const filePath = path.join(UPLOAD_DIR, tempId);
+            if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, error: 'Original file lost' });
 
-    // ✅ Base64 Upload (zuverlässiger)
-    const fileBuffer = fs.readFileSync(filePath);
-    const base64 = fileBuffer.toString('base64');
+            // ✅ Base64 Upload (zuverlässiger)
+            const fileBuffer = fs.readFileSync(filePath);
+            const base64 = fileBuffer.toString('base64');
 
-    const uploadRes = await axios.post('https://api.pdf.co/v1/file/upload/base64', {
-        file: base64,
-        name: tempId
-    }, {
-        headers: { 
-            'x-api-key': PDFCO_API_KEY,
-            'Content-Type': 'application/json'
+            const uploadRes = await axios.post('https://api.pdf.co/v1/file/upload/base64', {
+                file: base64,
+                name: tempId
+            }, {
+                headers: {
+                    'x-api-key': PDFCO_API_KEY,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (uploadRes.data.error) throw new Error(uploadRes.data.message);
+            targetUrl = uploadRes.data.url;
         }
-    });
-
-    if (uploadRes.data.error) throw new Error(uploadRes.data.message);
-    targetUrl = uploadRes.data.url;
-}
 
         if (!targetUrl) return res.status(400).json({ success: false, error: 'No PDF source found' });
 
         // CALL PDF.CO FILL
         // Format fields for PDF.co values
         const fieldsArray = [];
-let index = 1;
+        let index = 1;
 
-for (const field of fields) {
-    if (field.value && field.value.toString().trim()) {
-        fieldsArray.push(`${index};${field.name};${field.value}`);
-        index++;
-    }
-}
+        for (const field of fields) {
+            if (field.value && field.value.toString().trim()) {
+                fieldsArray.push(`${index};${field.name};${field.value}`);
+                index++;
+            }
+        }
 
-const fieldsString = fieldsArray.join('|');
+        const fieldsString = fieldsArray.join('|');
 
-Logger.info('FILL', `FieldsString: ${fieldsString}`);
+        Logger.info('FILL', `FieldsString: ${fieldsString}`);
 
-const fillRes = await axios.post('https://api.pdf.co/v1/pdf/edit/add', {
-    url: targetUrl,
-    fieldsString: fieldsString,  // ✅ Singular, nicht "fields"!
-    async: false
-}, { headers: { 'x-api-key': PDFCO_API_KEY } });
+        const fillRes = await axios.post('https://api.pdf.co/v1/pdf/edit/add', {
+            url: targetUrl,
+            fieldsString: fieldsString,  // ✅ Singular, nicht "fields"!
+            async: false
+        }, { headers: { 'x-api-key': PDFCO_API_KEY } });
         if (fillRes.data.error) throw new Error(fillRes.data.message);
 
         // CLEANUP
