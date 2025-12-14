@@ -8,9 +8,18 @@ export default function Navbar({ currentPage, onNavigate, onUploadClick, status 
     const [menuOpen, setMenuOpen] = useState(false);
     const { user, isAuthenticated } = useAuth();
 
+    // Load Theme Preference
+    useState(() => {
+        const savedTheme = localStorage.getItem('finny_theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-mode');
+        }
+    });
+
     const navItems = [
         { id: 'home', label: 'Startseite', icon: Home },
-        { id: 'full-ai', label: 'PDF Assistent Full KI', icon: FileText },
+        { id: 'home', label: 'Startseite', icon: Home },
+        // { id: 'full-ai', label: 'Full KI', icon: FileText }, // Moved to standalone link
         { id: 'features', label: 'Funktionen', icon: Info },
         { id: 'help', label: 'Hilfe', icon: HelpCircle },
     ];
@@ -98,11 +107,24 @@ export default function Navbar({ currentPage, onNavigate, onUploadClick, status 
                     </motion.button>
                 )}
 
+                <a
+                    className="nav-link full-ki-link"
+                    href="/full-ki-mode.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setMenuOpen(false)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                    <FileText size={18} />
+                    <span>PDF Assistent Full KI</span>
+                </a>
+
                 <button
                     className="navbar-theme-toggle"
                     onClick={() => {
                         document.body.classList.toggle('dark-mode');
-                        // Optional: Save preference to localStorage if desired in future
+                        const isDark = document.body.classList.contains('dark-mode');
+                        localStorage.setItem('finny_theme', isDark ? 'dark' : 'light');
                     }}
                     title="Design umschalten"
                 >

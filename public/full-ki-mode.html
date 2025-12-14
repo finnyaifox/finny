@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finny | Full KI PDF Assistent</title>
+    <style>
+        :root {
+            /* Modern Futuristic Orange Theme */
+            --bg-deep: #0a0b10;
+            --bg-card: #13151a;
+            --primary: #ff8552;
+            --primary-glow: rgba(255, 133, 82, 0.4);
+            --text-main: #ffffff;
+            --text-muted: #a0a0a0;
+            --border: rgba(255, 255, 255, 0.1);
+            --font-main: 'Inter', system-ui, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* LIVE CLOCK */
+        .live-clock {
+            position: fixed;
+            top: 15px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-align: right;
+            backdrop-filter: blur(5px);
+        }
+
+        .clock-time {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--primary);
+            text-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .clock-date {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* LAYOUT */
+        header {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-card);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo img {
+            width: 40px;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+            overflow: hidden;
+        }
+
+        /* LEFT PANEL: Progress & Info */
+        .panel-left {
+            width: 300px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .progress-container {
+            margin-bottom: 30px;
+        }
+
+        .progress-label {
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--primary);
+            box-shadow: 0 0 10px var(--primary-glow);
+            transition: width 0.5s ease;
+        }
+
+        .progress-text {
+            text-align: right;
+            font-size: 0.8rem;
+            margin-top: 4px;
+            color: var(--primary);
+        }
+
+        /* RIGHT PANEL: Chat */
+        .panel-chat {
+            flex: 1;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* UPLOAD OVERLAY */
+        .upload-overlay {
+            position: absolute;
+            inset: 0;
+            background: var(--bg-card);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+        }
+
+        .upload-box {
+            border: 2px dashed var(--border);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .upload-box:hover {
+            border-color: var(--primary);
+            background: rgba(255, 133, 82, 0.05);
+        }
+
+        .upload-title {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .upload-sub {
+            color: var(--text-muted);
+        }
+
+        /* CHAT AREA */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .message.ai {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: var(--primary);
+            color: #000;
+            font-weight: 500;
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .typing-indicator {
+            color: var(--text-muted);
+            font-style: italic;
+            font-size: 0.9rem;
+            margin-left: 10px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .typing-indicator.visible {
+            opacity: 1;
+        }
+
+        .chat-input-area {
+            padding: 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: #fff;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary);
+        }
+
+        button.send-btn {
+            background: var(--primary);
+            border: none;
+            padding: 0 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        button.send-btn:active {
+            transform: scale(0.95);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- LIVE CLOCK -->
+    <div class="live-clock">
+        <div class="clock-time" id="clockTime">00:00:00</div>
+        <div class="clock-date" id="clockDate">Laden...</div>
+    </div>
+
+    <header>
+        <div class="logo">
+            <img src="/assets/finny-mascot.png" alt="Finny">
+            <span>Finny Full KI</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- LEFT PANEL -->
+        <div class="panel-left">
+            <div class="progress-container">
+                <div class="progress-label">Fortschritt</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+                <div class="progress-text" id="progressText">0%</div>
+            </div>
+
+            <div id="statusLog" style="font-size: 0.85rem; color: var(--text-muted); margin-top: auto;">
+                Bereit zum Start...
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL -->
+        <div class="panel-chat">
+
+            <!-- UPLOAD ZONE -->
+            <div class="upload-overlay" id="uploadOverlay">
+                <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-title">PDF hier ablegen</div>
+                    <div class="upload-sub">oder klicken zum Hochladen</div>
+                    <input type="file" id="fileInput" accept=".pdf" style="display: none"
+                        onchange="handleFileUpload(this.files[0])">
+                </div>
+            </div>
+
+            <!-- CHAT INTERFACE -->
+            <div class="chat-messages" id="chatMessages">
+                <div class="message ai">
+                    Hallo! Ich bin Finny im Full-KI Modus. 👋<br>
+                    Bitte lade dein Formular hoch, ich analysiere es komplett selbstständig.
+                </div>
+            </div>
+
+            <div class="typing-indicator" id="typingIndicator">Finny schreibt...</div>
+
+            <div class="chat-input-area">
+                <input type="text" id="msgInput" placeholder="Deine Antwort..."
+                    onkeypress="if(event.key === 'Enter') sendMessage()">
+                <button class="send-btn" onclick="sendMessage()">➤</button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ========================
+        // LIVE CLOCK
+        // ========================
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clockTime').textContent = now.toLocaleTimeString('de-DE');
+            document.getElementById('clockDate').textContent = now.toLocaleDateString('de-DE');
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // ========================
+        // LOGIC
+        // ========================
+        let currentState = {
+            sessionId: null,
+            tempId: null,
+            messages: [],
+            totalFields: 0,
+            filledFields: 0
+        };
+
+        const API_BASE = '/api';
+
+        function log(msg) {
+            const el = document.getElementById('statusLog');
+            el.innerHTML += `<br>• ${msg}`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        async function handleFileUpload(file) {
+            if (!file) return;
+
+            document.getElementById('uploadOverlay').classList.add('hidden');
+            log('Datei wird hochgeladen...');
+
+            // 1. Upload Temp
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch(`${API_BASE}/upload-pdf-temp`, { method: 'POST', body: formData });
+                const data = await res.json();
+
+                if (!data.success) throw new Error(data.error);
+
+                currentState.tempId = data.tempId;
+                log('Upload erfolgreich. Starte KI-Analyse...');
+
+                // 2. Start Extraction Chat
+                startExtraction(data.tempId);
+
+            } catch (err) {
+                alert('Fehler: ' + err.message);
+                document.getElementById('uploadOverlay').classList.remove('hidden');
+            }
+        }
+
+        async function startExtraction(tempId) {
+            addMessage('ai', 'Einen Moment, ich analysiere das Dokument... 🔍');
+            setTyping(true);
+
+            try {
+                const res = await fetch(`${API_BASE}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        isExtraction: true,
+                        tempId: tempId,
+                        messages: []
+                    })
+                });
+                const data = await res.json();
+
+                setTyping(false);
+                if (data.success) {
+                    currentState.sessionId = data.sessionId;
+                    currentState.totalFields = data.fields?.length || 0;
+                    updateProgress(0);
+
+                    addMessage('ai', `Analyse fertig! Ich habe ${data.fields.length} Felder gefunden. Lass uns starten!`);
+
+                    // Trigger first field prompt
+                    sendMessageToAI('');
+                }
+            } catch (err) {
+                setTyping(false);
+                addMessage('ai', 'Fehler bei der Analyse: ' + err.message);
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('msgInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            addMessage('user', text);
+            input.value = '';
+
+            await sendMessageToAI(text);
+        }
+
+        async function sendMessageToAI(userText) {
+            setTyping(true);
+
+            // Add to history
+            if (userText) currentState.messages.push({ role: 'user', content: userText });
+
+            try {
+                const res = await fetch(`${API_BASE}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId: currentState.sessionId,
+                        messages: currentState.messages,
+                        // Context state logic handled by backend mostly for B, 
+                        // or we pass if we had local state. Backend keeps session for B.
+                    })
+                });
+
+                const data = await res.json();
+                setTyping(false);
+
+                if (data.success) {
+                    addMessage('ai', data.content);
+                    if (data.content) currentState.messages.push({ role: 'assistant', content: data.content });
+
+                    // Update Progress approximation (Backend doesn't return exact progress in this simple JSON, 
+                    // we could improve backend to return it. For now, we increment)
+                    if (userText && !data.action?.includes('intro')) {
+                        currentState.filledFields = Math.min(currentState.filledFields + 1, currentState.totalFields);
+                        updateProgress();
+                    }
+
+                    if (data.action === 'completed') {
+                        log('Formular fertig!');
+                        // Call Fill
+                        finishPDF();
+                    }
+                }
+
+            } catch (err) {
+                setTyping(false);
+            }
+        }
+
+        async function finishPDF() {
+            log('Erstelle PDF...');
+            try {
+                const res = await fetch(`${API_BASE}/fill-pdf`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId: currentState.sessionId,
+                        tempId: currentState.tempId,
+                        fields: [] // Backend session has fields for Variant B
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    addMessage('ai', `Fertig! <br><a href="${data.url}" target="_blank" style="color:#fff; font-weight:bold; text-decoration:underline;">📥 PDF HIER HERUNTERLADEN</a>`);
+                }
+            } catch (e) {
+                log('Fehler beim Füllen: ' + e.message);
+            }
+        }
+
+        function addMessage(role, html) {
+            const list = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            div.innerHTML = html;
+            list.appendChild(div);
+            list.scrollTop = list.scrollHeight;
+        }
+
+        function setTyping(on) {
+            const el = document.getElementById('typingIndicator');
+            if (on) el.classList.add('visible');
+            else el.classList.remove('visible');
+        }
+
+        function updateProgress() {
+            let pct = 0;
+            if (currentState.totalFields > 0) {
+                pct = Math.round((currentState.filledFields / currentState.totalFields) * 100);
+            }
+            document.getElementById('progressFill').style.width = pct + '%';
+            document.getElementById('progressText').innerText = pct + '%';
+        }
+
+    </script>
+</body>
+
+</html>
