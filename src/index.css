@@ -77,6 +77,33 @@
   /* 26px - erhöht von 24px */
   --font-size-3xl: 2.25rem;
   /* 36px - erhöht von 32px */
+  /* 22px - erhöht von 20px */
+  --font-size-2xl: 1.625rem;
+  /* 26px - erhöht von 24px */
+  --font-size-3xl: 2.25rem;
+  /* 36px - erhöht von 32px */
+}
+
+/* DARK MODE OVERRIDES */
+body.dark-mode {
+  --color-bg-deep: #0f1115;
+  /* Deep Space Black */
+  --color-bg-card: #181b21;
+  /* Dark Grey Card */
+  --color-bg-elevated: #232730;
+  /* Elevated Element */
+
+  --color-glass: rgba(24, 27, 33, 0.8);
+  --color-glass-light: rgba(255, 133, 82, 0.15);
+  /* Orange Tint */
+  --color-glass-border: rgba(255, 255, 255, 0.1);
+
+  --color-text-primary: #f0f2f5;
+  --color-text-secondary: #a0aab5;
+  --color-text-muted: #636e72;
+
+  --glow-primary: 0 0 20px rgba(255, 133, 82, 0.4);
+  --glow-secondary: 0 0 20px rgba(92, 159, 255, 0.4);
 }
 
 * {
