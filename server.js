@@ -178,8 +178,40 @@ app.post('/api/chat', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Invalid Input' });
         }
 
-        const { sessionId, messages, isExtraction, tempId } = value;
+        const { sessionId, messages, isExtraction, tempId, isSupport } = value;
         let { currentFieldIndex, collectedData } = value;
+
+        // --- VARIANT C: SUPPORT CHAT ---
+        if (isSupport) {
+            const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || '';
+
+            // Simple AI Chat for Support
+            const supportPrompt = `Du bist Finny, ein hilfreicher KI-Assistent.
+Antworte dem Nutzer freundlich und kompenter auf seine Frage: "${lastUserMsg}"
+Du kannst über alles reden (Wetter, Smalltalk, technische Hilfe). Sei locker und hilfsbereit.`;
+
+            try {
+                const aiRes = await axios.post('https://api.cometapi.com/v1/chat/completions', {
+                    model: MODEL_NAME,
+                    messages: [
+                        { role: 'system', content: supportPrompt },
+                        ...messages.filter(m => m.role !== 'system')
+                    ],
+                    temperature: 0.7 // Higher creativity for chat
+                }, {
+                    headers: { 'Authorization': `Bearer ${COMET_API_KEY}` }
+                });
+
+                return res.json({
+                    success: true,
+                    content: aiRes.data.choices?.[0]?.message?.content || 'Ich bin da, aber sprachlos.'
+                });
+
+            } catch (err) {
+                Logger.error('SUPPORT', 'Chat failed', err);
+                return res.status(500).json({ success: false, error: 'Support unavailable' });
+            }
+        }
 
         // --- VARIANT B: EXTRACTION STAGE ---
         if (isExtraction && tempId) {
