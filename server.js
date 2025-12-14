@@ -184,22 +184,29 @@ app.post('/api/chat', async (req, res) => {
         // --- VARIANT C: SUPPORT CHAT ---
         if (isSupport) {
             const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || '';
-
-            // Simple AI Chat for Support
-            const supportPrompt = `Du bist Finny, ein hilfreicher KI-Assistent.
-Antworte dem Nutzer freundlich und kompenter auf seine Frage: "${lastUserMsg}"
-Du kannst über alles reden (Wetter, Smalltalk, technische Hilfe). Sei locker und hilfsbereit.`;
+            Logger.info('SUPPORT', `Request received: ${lastUserMsg}`);
 
             try {
-                const aiRes = await axios.post('https://api.cometapi.com/v1/chat/completions', {
-                    model: MODEL_NAME,
-                    messages: [
-                        { role: 'system', content: supportPrompt },
-                        ...messages.filter(m => m.role !== 'system')
-                    ],
-                    temperature: 0.7 // Higher creativity for chat
-                }, {
-                    headers: { 'Authorization': `Bearer ${COMET_API_KEY}` }
+                // Strict implementation of User's requested JSON structure
+                const requestBody = {
+                    "model": MODEL_NAME, // "gemini-2.5-pro-all"
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are a helpful assistant."
+                        },
+                        {
+                            "role": "user",
+                            "content": lastUserMsg
+                        }
+                    ]
+                };
+
+                const aiRes = await axios.post('https://api.cometapi.com/v1/chat/completions', requestBody, {
+                    headers: {
+                        'Authorization': `Bearer ${COMET_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
                 });
 
                 return res.json({
@@ -209,7 +216,10 @@ Du kannst über alles reden (Wetter, Smalltalk, technische Hilfe). Sei locker un
 
             } catch (err) {
                 Logger.error('SUPPORT', 'Chat failed', err);
-                return res.status(500).json({ success: false, error: 'Support unavailable' });
+                return res.json({
+                    success: true,
+                    content: "⚠️ Fehler bei der Verbindung zur KI. Bitte versuche es später."
+                });
             }
         }
 
