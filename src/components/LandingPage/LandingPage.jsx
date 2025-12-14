@@ -53,22 +53,22 @@ export default function LandingPage({ onStartDemo, onUploadClick }) {
                         <div className="hero-cta">
                             <motion.button
                                 className="hero-btn-primary"
-                                onClick={onUploadClick}
+                                onClick={onUploadClick.onStandardClick}
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                             >
                                 <Upload />
-                                PDF hochladen
+                                Standard Upload (Link)
                             </motion.button>
 
                             <motion.button
                                 className="hero-btn-secondary"
-                                onClick={onStartDemo}
+                                onClick={onUploadClick.onFullKiClick}
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                             >
-                                <Play />
-                                Demo starten
+                                <Sparkles />
+                                Full KI (Datei)
                             </motion.button>
                         </div>
 

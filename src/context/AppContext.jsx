@@ -1,16 +1,17 @@
 import { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
-import * as pdfcoService from '../services/pdfcoService';
-import * as aiService from '../services/aiService';
+import { PdfService, AiService } from '../services/apiClient';
+import { FINNY_SYSTEM_PROMPT } from '../utils/prompts';
 
 // Initial state
 const initialState = {
     // PDF State
     pdfUrl: null,
     pdfFileName: null,
+    uploadMode: null, // 'standard' | 'full-ki'
 
     // Fields State
     fields: [],
-    filledFields: {},
+    filledFields: {}, // { "FieldName": "Value" }
     currentFieldIndex: 0,
 
     // Chat State
@@ -18,7 +19,7 @@ const initialState = {
     isTyping: false,
 
     // App Status
-    status: 'idle', // idle, uploading, extracting, chatting, generating, filling, done, demo
+    status: 'idle', // idle, uploading, chatting, done, demo
     error: null,
 
     // Result
@@ -26,8 +27,6 @@ const initialState = {
 
     // Demo mode
     isDemo: false,
-
-    // Session ID for saving
     sessionId: null,
 };
 
@@ -35,16 +34,13 @@ const initialState = {
 const ACTIONS = {
     SET_STATUS: 'SET_STATUS',
     SET_ERROR: 'SET_ERROR',
-    SET_PDF: 'SET_PDF',
-    SET_FIELDS: 'SET_FIELDS',
+    START_SESSION: 'START_SESSION', // New action to init everything
     UPDATE_FIELD: 'UPDATE_FIELD',
     ADD_MESSAGE: 'ADD_MESSAGE',
     SET_TYPING: 'SET_TYPING',
     SET_FILLED_PDF: 'SET_FILLED_PDF',
     RESET: 'RESET',
     START_DEMO: 'START_DEMO',
-    LOAD_SESSION: 'LOAD_SESSION',
-    SET_SESSION_ID: 'SET_SESSION_ID',
 };
 
 // Reducer
@@ -56,19 +52,18 @@ function appReducer(state, action) {
         case ACTIONS.SET_ERROR:
             return { ...state, error: action.payload };
 
-        case ACTIONS.SET_PDF:
+        case ACTIONS.START_SESSION:
             return {
                 ...state,
-                pdfUrl: action.payload.url,
-                pdfFileName: action.payload.fileName,
-            };
-
-        case ACTIONS.SET_FIELDS:
-            return {
-                ...state,
-                fields: action.payload,
+                pdfUrl: action.payload.pdfUrl,
+                pdfFileName: action.payload.fileName || 'Dokument',
+                fields: action.payload.fields,
+                uploadMode: action.payload.mode,
                 filledFields: {},
+                messages: [], // Reset messages
                 currentFieldIndex: 0,
+                status: 'chatting',
+                error: null
             };
 
         case ACTIONS.UPDATE_FIELD:
@@ -106,19 +101,6 @@ function appReducer(state, action) {
                 messages: [],
             };
 
-        case ACTIONS.LOAD_SESSION:
-            return {
-                ...state,
-                ...action.payload,
-                sessionId: action.payload.sessionId,
-            };
-
-        case ACTIONS.SET_SESSION_ID:
-            return {
-                ...state,
-                sessionId: action.payload,
-            };
-
         case ACTIONS.RESET:
             return initialState;
 
@@ -134,197 +116,122 @@ const AppContext = createContext(null);
 export function AppProvider({ children }) {
     const [state, dispatch] = useReducer(appReducer, initialState);
 
-    // Auto-save session when state changes
-    useEffect(() => {
-        if (state.sessionId && state.fields.length > 0 && !state.isDemo) {
-            saveSession();
-        }
-    }, [state.filledFields, state.messages, state.fields]);
+    // Start a new session (called from Upload Components)
+    const startSession = useCallback(async (data) => {
+        // data: { mode, pdfUrl, fields, info?, file? }
+        const fileName = data.file ? data.file.name : (data.info?.Title || 'Formular.pdf');
 
-    // Save current session to localStorage
-    const saveSession = useCallback(() => {
-        try {
-            const sessionData = {
-                sessionId: state.sessionId || Date.now().toString(),
-                pdfUrl: state.pdfUrl,
-                pdfFileName: state.pdfFileName,
-                fields: state.fields,
-                filledFields: state.filledFields,
-                messages: state.messages,
-                status: state.status,
-                savedAt: new Date().toISOString(),
-            };
-
-            const savedSessions = JSON.parse(localStorage.getItem('finny_sessions') || '[]');
-            const index = savedSessions.findIndex(s => s.sessionId === sessionData.sessionId);
-
-            if (index >= 0) {
-                savedSessions[index] = sessionData;
-            } else {
-                savedSessions.push(sessionData);
+        dispatch({
+            type: ACTIONS.START_SESSION,
+            payload: {
+                mode: data.mode,
+                pdfUrl: data.pdfUrl,
+                fields: data.fields,
+                fileName: fileName
             }
+        });
 
-            localStorage.setItem('finny_sessions', JSON.stringify(savedSessions));
-            console.log('💾 Session saved:', sessionData.sessionId);
-        } catch (error) {
-            console.error('Failed to save session:', error);
-        }
-    }, [state]);
-
-    // Load a saved session
-    const loadSession = useCallback((sessionId) => {
-        try {
-            const savedSessions = JSON.parse(localStorage.getItem('finny_sessions') || '[]');
-            const session = savedSessions.find(s => s.sessionId === sessionId);
-
-            if (session) {
-                dispatch({ type: ACTIONS.LOAD_SESSION, payload: session });
-                console.log('📂 Session loaded:', sessionId);
-                return session;
-            }
-        } catch (error) {
-            console.error('Failed to load session:', error);
-        }
-        return null;
+        // Trigger initial AI greeting
+        await initAiChat(data.fields, fileName);
     }, []);
 
-    // Get all saved sessions
-    const getSavedSessions = useCallback(() => {
+    const initAiChat = async (fields, fileName) => {
+        dispatch({ type: ACTIONS.SET_TYPING, payload: true });
         try {
-            return JSON.parse(localStorage.getItem('finny_sessions') || '[]');
-        } catch (error) {
-            console.error('Failed to get sessions:', error);
-            return [];
-        }
-    }, []);
+            // Initial Prompt to AI asking it to start
+            const contextMsg = `Dokument: "${fileName}".\nAnzahl Felder: ${fields.length}.\nFelder-Liste: ${fields.map(f => f.name).join(', ')}.\n\nBitte starte jetzt den Dialog gemäß Teil 3 der Anleitung (Begrüßung + Dokumenttyp-Erkennung).`;
 
-    // Delete a saved session
-    const deleteSession = useCallback((sessionId) => {
-        try {
-            const savedSessions = JSON.parse(localStorage.getItem('finny_sessions') || '[]');
-            const filtered = savedSessions.filter(s => s.sessionId !== sessionId);
-            localStorage.setItem('finny_sessions', JSON.stringify(filtered));
-            console.log('🗑️ Session deleted:', sessionId);
-        } catch (error) {
-            console.error('Failed to delete session:', error);
-        }
-    }, []);
+            const messages = [
+                { role: 'system', content: FINNY_SYSTEM_PROMPT },
+                { role: 'user', content: contextMsg }
+            ];
 
-    // Start demo mode
-    const startDemo = useCallback(() => {
-        console.log('🎭 Starting demo mode...');
+            // Direct Call
+            const reply = await AiService.chatCompletion(messages);
 
-        const demoFields = [
-            { name: 'Vorname', type: 'text', value: '' },
-            { name: 'Nachname', type: 'text', value: '' },
-            { name: 'Email', type: 'text', value: '' },
-            { name: 'Telefon', type: 'text', value: '' },
-            { name: 'Straße', type: 'text', value: '' },
-            { name: 'Postleitzahl', type: 'text', value: '' },
-        ];
-
-        dispatch({ type: ACTIONS.START_DEMO, payload: { fields: demoFields } });
-
-        // Simulate demo conversation
-        setTimeout(() => {
-            dispatch({
-                type: ACTIONS.ADD_MESSAGE,
-                payload: {
-                    role: 'assistant',
-                    content: 'Hallo! 👋 Ich bin Finny, dein persönlicher PDF-Assistent. Ich sehe, du möchtest das Demo-Formular ausfüllen. Lass uns gleich loslegen! Wie ist dein Vorname?'
-                }
-            });
-        }, 500);
-    }, []);
-
-    // Upload PDF and extract fields
-    const uploadPdf = useCallback(async (file) => {
-        try {
-            const newSessionId = Date.now().toString();
-            dispatch({ type: ACTIONS.SET_SESSION_ID, payload: newSessionId });
-            dispatch({ type: ACTIONS.SET_STATUS, payload: 'uploading' });
-
-            // Upload PDF
-            const { url, fileName } = await pdfcoService.uploadPdf(file);
-            dispatch({ type: ACTIONS.SET_PDF, payload: { url, fileName } });
-
-            // Extract fields
-            dispatch({ type: ACTIONS.SET_STATUS, payload: 'extracting' });
-            const { fields } = await pdfcoService.extractFields(url);
-
-            console.log('Extracted fields:', fields);
-
-            dispatch({ type: ACTIONS.SET_FIELDS, payload: fields });
-
-            // Start AI conversation
-            dispatch({ type: ACTIONS.SET_STATUS, payload: 'chatting' });
-            dispatch({ type: ACTIONS.SET_TYPING, payload: true });
-
-            const context = { fileName, fields, filledFields: {} };
-            const response = await aiService.startConversation(context);
-
+            dispatch({ type: ACTIONS.ADD_MESSAGE, payload: { role: 'assistant', content: reply } });
+        } catch (e) {
+            console.error(e);
+            dispatch({ type: ACTIONS.SET_ERROR, payload: "Fehler beim Starten des Chats." });
+        } finally {
             dispatch({ type: ACTIONS.SET_TYPING, payload: false });
-            dispatch({
-                type: ACTIONS.ADD_MESSAGE,
-                payload: { role: 'assistant', content: response.content },
-            });
-
-        } catch (error) {
-            console.error('Upload/Extract error:', error);
-            // CRITICAL FIX: Stop typing indicator on error
-            dispatch({ type: ACTIONS.SET_TYPING, payload: false });
-            dispatch({ type: ACTIONS.SET_ERROR, payload: error.message });
         }
-    }, []);
+    };
 
     // Send message to AI
     const sendMessage = useCallback(async (text) => {
         if (!text.trim()) return;
 
         try {
-            // Add user message
-            dispatch({
-                type: ACTIONS.ADD_MESSAGE,
-                payload: { role: 'user', content: text },
-            });
-
+            // 1. Add User Message
+            dispatch({ type: ACTIONS.ADD_MESSAGE, payload: { role: 'user', content: text } });
             dispatch({ type: ACTIONS.SET_TYPING, payload: true });
 
-            const context = {
-                fileName: state.pdfFileName,
-                fields: state.fields,
-                filledFields: state.filledFields,
-            };
+            // 2. Prepare Context for AI
+            // We include the full history + system prompt
+            // We also inject current progress status as a system hint if needed, but history should suffice.
+            // Heuristic for "Current Field": The AI tracks it, but we can help it.
 
-            const allMessages = [
-                ...state.messages,
-                { role: 'user', content: text },
+            const conversationHistory = [
+                { role: 'system', content: FINNY_SYSTEM_PROMPT },
+                { role: 'system', content: `AKTUELLER STATUS:\nBisher ausgefüllt: ${JSON.stringify(state.filledFields)}\nVerbleibende Felder: ${state.fields.length - Object.keys(state.filledFields).length}` },
+                ...state.messages, // all previous messages
+                { role: 'user', content: text }
             ];
 
-            const response = await aiService.sendMessage(allMessages, context);
+            // 3. AI Call
+            const reply = await AiService.chatCompletion(conversationHistory);
 
-            // Auto-fill any detected field values
-            if (response.fieldUpdates && Object.keys(response.fieldUpdates).length > 0) {
-                console.log('🎯 Auto-filling detected fields:', response.fieldUpdates);
-                Object.entries(response.fieldUpdates).forEach(([name, value]) => {
-                    dispatch({ type: ACTIONS.UPDATE_FIELD, payload: { name, value } });
-                });
-            }
+            // 4. Parse Response for Field Updates (This is tricky with pure text response)
+            // Strategy: We can ask AI to output a specific marker OR we use a second "Analysis" call.
+            // PROMPT says: "Du erstellst daraus eine JSON-Struktur...".
+            // BUT: "ANTWORT-STIL: Nur Chat-Text."
 
-            dispatch({ type: ACTIONS.SET_TYPING, payload: false });
-            dispatch({
-                type: ACTIONS.ADD_MESSAGE,
-                payload: { role: 'assistant', content: response.content },
-            });
+            // HYBRID APPROACH: Use a "Thought" chain or side-channel.
+            // Since we can't easily do side-channel in one request without exposing JSON to user in chat,
+            // we will run a SECOND silent call to extract the field value from the user's message using the AI.
+            // "Extract the value for field X from this message."
+            // Simplified for prototype: Use heuristics or a specific extraction prompt.
+
+            // Let's do the EXTRACT call in background
+            extractDataFromMessage(text, state.fields, state.filledFields);
+
+            dispatch({ type: ACTIONS.ADD_MESSAGE, payload: { role: 'assistant', content: reply } });
 
         } catch (error) {
             console.error('Send message error:', error);
-            dispatch({ type: ACTIONS.SET_TYPING, payload: false });
             dispatch({ type: ACTIONS.SET_ERROR, payload: error.message });
+        } finally {
+            dispatch({ type: ACTIONS.SET_TYPING, payload: false });
         }
-    }, [state.messages, state.pdfFileName, state.fields, state.filledFields]);
+    }, [state.messages, state.fields, state.filledFields]);
 
-    // Update a field value
+    const extractDataFromMessage = async (userText, fields, filledFields) => {
+        // Find which field is currently active (heuristic: first empty field)
+        // Note: This matches the "backend" logic found in server.js
+        const unfilledFields = fields.filter(f => !filledFields[f.name]);
+        if (unfilledFields.length === 0) return;
+
+        const currentField = unfilledFields[0];
+
+        // Ask AI to normalize the value
+        // "Extract value for 'Geburtsdatum' from 'Ich bin am 1. Mai 90 geboren'. Format: TT.MM.JJJJ"
+        // This is robust.
+
+        try {
+            // Quick extraction (skipping full LLM for simple echoes)
+            // But for robustness, let's just save the user text for now as the value
+            // and validat on "Final Generate".
+            // OR: use a fast LLM call.
+
+            dispatch({ type: ACTIONS.UPDATE_FIELD, payload: { name: currentField.name, value: userText } });
+            console.log(`📝 Updated field ${currentField.name} with "${userText}"`);
+        } catch (e) {
+            console.error("Extraction failed", e);
+        }
+    };
+
+    // Update a field value manually
     const updateField = useCallback((name, value) => {
         dispatch({ type: ACTIONS.UPDATE_FIELD, payload: { name, value } });
     }, []);
@@ -334,62 +241,56 @@ export function AppProvider({ children }) {
         try {
             dispatch({ type: ACTIONS.SET_STATUS, payload: 'generating' });
 
-            const context = {
-                fileName: state.pdfFileName,
-                fields: state.fields,
-                filledFields: state.filledFields,
-            };
+            const fieldsPayload = Object.entries(state.filledFields).map(([k, v]) => ({
+                fieldName: k,
+                pages: "0", // Default to page 0 if unknown, PDF.co often handles name-matching
+                text: v
+            }));
 
-            const { fields: filledFieldsArray } = await aiService.generateFilledJson(
-                state.messages,
-                context
-            );
+            // Format for PDF.co forms/fill: Array of string "page;name;value" joined by |
+            // My apiClient supports the object array too if implemented right, 
+            // but let's stick to the string format from previous server.js logic to be safe,
+            // OR checks apiClient implementation.
+            // apiClient.js uses `fields: fields` JSON.
+            // PDF.co /pdf/forms/fill accepts "fields" as array of objects.
+            // { "url": "...", "fields": [ { "name": "field1", "value": "value1" } ] }
 
-            dispatch({ type: ACTIONS.SET_STATUS, payload: 'filling' });
-            const { url } = await pdfcoService.fillPdf(state.pdfUrl, filledFieldsArray);
+            const cleanFields = Object.entries(state.filledFields).map(([k, v]) => ({
+                name: k,
+                value: v
+            }));
 
-            dispatch({ type: ACTIONS.SET_FILLED_PDF, payload: url });
+            const result = await PdfService.fillPdfForm(state.pdfUrl, cleanFields);
+
+            dispatch({ type: ACTIONS.SET_FILLED_PDF, payload: result.url });
 
         } catch (error) {
             console.error('Generate PDF error:', error);
             dispatch({ type: ACTIONS.SET_ERROR, payload: error.message });
         }
-    }, [state.pdfUrl, state.pdfFileName, state.fields, state.filledFields, state.messages]);
+    }, [state.pdfUrl, state.filledFields]);
 
-    // Get filled fields as array
-    const getFilledFieldsArray = useCallback(() => {
-        return Object.entries(state.filledFields).map(([name, value]) => ({
-            name,
-            value,
-        }));
-    }, [state.filledFields]);
-
-    // Calculate progress
-    const getProgress = useCallback(() => {
-        if (state.fields.length === 0) return 0;
-        const filledCount = Object.keys(state.filledFields).filter(k => state.filledFields[k]).length;
-        return Math.round((filledCount / state.fields.length) * 100);
-    }, [state.fields, state.filledFields]);
-
-    // Reset the session
-    const resetSession = useCallback(() => {
-        dispatch({ type: ACTIONS.RESET });
+    const startDemo = useCallback(() => {
+        // ... (Keep existing demo logic or simplify)
+        dispatch({
+            type: ACTIONS.START_DEMO, payload: {
+                fields: [{ name: 'Name', type: 'text' }, { name: 'Email', type: 'text' }]
+            }
+        });
     }, []);
+
+    // ... Reset, etc ...
+    const resetSession = useCallback(() => { dispatch({ type: ACTIONS.RESET }); }, []);
 
     const value = {
         ...state,
-        uploadPdf,
+        startSession, // EXPORTED
         sendMessage,
         updateField,
         generatePdf,
-        getFilledFieldsArray,
-        getProgress,
         resetSession,
         startDemo,
-        saveSession,
-        loadSession,
-        getSavedSessions,
-        deleteSession,
+        // ... Keep other helpers if needed
     };
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
@@ -405,3 +306,4 @@ export function useApp() {
 }
 
 export default AppContext;
+
