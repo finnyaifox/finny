@@ -4,7 +4,13 @@ import { Upload, Send, FileText, Check, Clock } from 'lucide-react';
 import axios from 'axios';
 import '../Sidebar/Sidebar.css'; // Reusing sidebar styles
 import '../Chat/ChatPanel.css'; // Reusing chat styles
+import '../Chat/ChatPanel.css'; // Reusing chat styles
 import './FullAIWorkspace.css'; // Specific styles
+
+// Explicit Backend Connection
+const api = axios.create({
+    baseURL: 'http://localhost:3000/api'
+});
 
 export default function FullAIWorkspace() {
     const [status, setStatus] = useState('upload'); // upload, analyzing, chatting, done
@@ -50,7 +56,7 @@ export default function FullAIWorkspace() {
 
         try {
             // 1. Upload Temp
-            const upRes = await axios.post('/api/upload-pdf-temp', formData, {
+            const upRes = await api.post('/upload-pdf-temp', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             const { tempId: tId } = upRes.data;
@@ -58,7 +64,7 @@ export default function FullAIWorkspace() {
 
             // 2. Extract Fields (Variant B extraction)
             // We mimic the chat request for extraction
-            const chatRes = await axios.post('/api/chat', {
+            const chatRes = await api.post('/chat', {
                 isExtraction: true,
                 tempId: tId,
                 messages: []
@@ -92,7 +98,7 @@ export default function FullAIWorkspace() {
         setInput('');
 
         try {
-            const res = await axios.post('/api/chat', {
+            const res = await api.post('/chat', {
                 sessionId,
                 tempId,
                 messages: [...messages, userMsg],
@@ -120,7 +126,7 @@ export default function FullAIWorkspace() {
     const handleFinish = async () => {
         setStatus('generating');
         try {
-            const res = await axios.post('/api/fill-pdf', {
+            const res = await api.post('/fill-pdf', {
                 sessionId,
                 tempId,
                 fields: fields.map(f => ({

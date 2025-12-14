@@ -3,7 +3,7 @@
  * Communicates with our Node.js backend (/api/chat)
  */
 
-const API_BASE = '/api';
+const API_BASE = 'http://localhost:3000/api';
 
 /**
  * Sends messages to the backend for processing.
