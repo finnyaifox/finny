@@ -209,12 +209,23 @@ export default function FullAIWorkspace() {
                     <div className="full-ai-chat">
                         <div className="chat-messages">
                             {messages.map((m, i) => (
-                                <div key={i} className={`msg ${m.role}`}>
-                                    {m.content}
+                                <div key={i} className={`msg-row ${m.role}`}>
+                                    {m.role === 'assistant' && <div className="avatar finny-avatar">🦊</div>}
+                                    <div className={`msg-bubble ${m.role}`}>
+                                        {m.content}
+                                    </div>
+                                    {m.role === 'user' && <div className="avatar user-avatar">👤</div>}
                                 </div>
                             ))}
                             <div ref={messagesEndRef} />
                         </div>
+
+                        <div className="full-ai-actions">
+                            <button className="action-btn" onClick={() => handleSend("Vorschau")}>👁️ Vorschau</button>
+                            <button className="action-btn" onClick={() => handleSend("Hilfe")}>❓ Hilfe</button>
+                            <button className="action-btn" onClick={() => handleSend("Überspringen")}>⏭️ Skip</button>
+                        </div>
+
                         <div className="chat-input-area">
                             <input
                                 value={input}

@@ -271,7 +271,8 @@ ${truncatedText}
 AUFGABE:
 Identifiziere alle relevanten Formular-Felder (Name, Datum, Unterschrift, Checkboxen etc.).
 Gib NUR ein JSON-Array zurück. Format:
-[{"fieldName": "Name", "type": "text"}, {"fieldName": "Geburtsdatum", "type": "date"}]
+[{"name": "Vorname", "type": "text"}, {"name": "Geburtsdatum", "type": "date"}]
+WICHTIG: Nutze den Key "name" für den Feldbezeichner!
 Kein Markdown, nur JSON.`;
 
             const aiResponse = await callAI([{ role: 'user', content: extractPrompt }]);
@@ -279,9 +280,16 @@ Kein Markdown, nur JSON.`;
             // C. Parse JSON
             let fields = [];
             try {
-                // Find JSON array in text (sometimes AI wraps in ```json ... ```)
+                // Find JSON array in text
                 const jsonMatch = aiResponse.match(/\[.*\]/s);
-                if (jsonMatch) fields = JSON.parse(jsonMatch[0]);
+                if (jsonMatch) {
+                    fields = JSON.parse(jsonMatch[0]);
+                    // Normalize fields (ensure 'name' property exists)
+                    fields = fields.map(f => ({
+                        name: f.name || f.fieldName || 'Unbenannt',
+                        type: f.type || 'text'
+                    }));
+                }
             } catch (e) {
                 Logger.warn('EXTRACT', 'JSON Fail', aiResponse);
             }
@@ -323,16 +331,35 @@ Kein Markdown, nur JSON.`;
         const fields = session?.fields || [];
         // Determine active field
         let activeFieldIndex = currentFieldIndex || 0;
-        // Simple heuristic search
-        if (fields.length > 0 && (!fields[activeFieldIndex] || collectedData[fields[activeFieldIndex].name])) {
-            activeFieldIndex = fields.findIndex(f => !collectedData[f.name]);
-            if (activeFieldIndex === -1) activeFieldIndex = fields.length;
+
+        // Simple heuristic search: Find first field that has NO value in collectedData
+        if (fields.length > 0) {
+            const foundIndex = fields.findIndex(f => !collectedData[f.name]);
+            if (foundIndex !== -1) {
+                activeFieldIndex = foundIndex;
+            } else {
+                // If all fields have data -> Complete
+                // BUT: Double check if we really have fields
+                activeFieldIndex = fields.length;
+            }
         }
 
         const currentField = fields[activeFieldIndex];
         const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || '';
 
-        // If finished
+        // --- CASE: INTRO (Start of conversation) ---
+        // If user says nothing yet or just started (heuristic)
+        // Usually frontend sends a hidden "init" or we inspect history length
+        const userMsgCount = messages.filter(m => m.role === 'user').length;
+        if (userMsgCount === 0 && fields.length > 0) {
+            return res.json({
+                success: true,
+                content: `Hallo! 👋 Ich bin Finny. Ich habe ${fields.length} Felder erkannt. Wollen wir mit "${fields[0].name}" beginnen?`,
+                fieldUpdates: {}
+            });
+        }
+
+        // --- CASE: ALL DONE ---
         if (!currentField && fields.length > 0) {
             return res.json({ success: true, content: "🎉 Das Formular ist komplett! Klicke auf 'Fertigstellen'.", action: 'completed' });
         }
