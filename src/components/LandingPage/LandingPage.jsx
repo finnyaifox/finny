@@ -188,7 +188,7 @@ export default function LandingPage({ onStartDemo, onUploadClick }) {
                     </p>
                     <motion.button
                         className="hero-btn-primary"
-                        onClick={onUploadClick}
+                        onClick={onUploadClick.onStandardClick}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         style={{ margin: '0 auto' }}
