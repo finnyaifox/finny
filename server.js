@@ -59,6 +59,21 @@ if (!fs.existsSync(UPLOAD_DIR)) {
     fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
+// DEBUG: Log directory contents to find 'dist'
+try {
+    console.log('📂 Current Directory:', __dirname);
+    console.log('📂 Root Files:', fs.readdirSync(__dirname));
+    if (fs.existsSync(path.join(__dirname, 'dist'))) {
+        console.log('📂 Dist Files:', fs.readdirSync(path.join(__dirname, 'dist')));
+    } else {
+        console.error('❌ DIST FOLDER NOT FOUND!');
+    }
+} catch (e) {
+    console.error('Debug FS Error:', e);
+}
+
+// Multer Storage
+
 // Multer Storage
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, UPLOAD_DIR),
@@ -434,15 +449,23 @@ app.post('/api/fill-pdf', async (req, res) => {
 
 // Serve Static Files
 app.use(express.static(path.join(__dirname, 'dist')));
-app.use(express.static(path.join(__dirname, 'public'))); // For full-ki-mode.html
+app.use(express.static(path.join(__dirname, 'public'))); // For full-ki-mode.html and assets
 
-// Catch All
-app.get(/.*/, (req, res) => {
+// SPA Fallback: ALL unknown routes go to index.html (React App)
+app.get('*', (req, res) => {
+    // Exception for specific standalone page if needed, but public static serves it first.
+    // If the browser requests /full-ki-mode.html, express.static catches it.
+    // If requests /foo implies React Router.
+
+    // Check if it's the specific Full KI page explicitly requested via route if static failed?
+    // generally static middleware handles real files.
+
     if (req.path === '/full-ki-mode.html') {
         res.sendFile(path.join(__dirname, 'public', 'full-ki-mode.html'));
-    } else {
-        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+        return;
     }
+
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 // Init
