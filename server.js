@@ -169,6 +169,15 @@ function analyzeFieldType(fieldName) {
     return { type: 'text', instruction: 'Bitte fülle dieses Feld aus.', example: 'Mustertext' };
 }
 
+/**
+ * Helper to remove internal chain-of-thought provided by some models
+ */
+function cleanAIResponse(text) {
+    if (!text) return '';
+    // Remove <think>...</think> blocks including newlines
+    return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+}
+
 app.post('/api/chat', async (req, res) => {
     try {
         // Validation
@@ -193,7 +202,7 @@ app.post('/api/chat', async (req, res) => {
                     "messages": [
                         {
                             "role": "system",
-                            "content": "You are a helpful assistant."
+                            "content": "Du bist Finny, der freundliche KI-Support für diese Webseite. Antworte IMMER auf Deutsch. Sei locker, hilfreich und nutze gerne Emojis 😊. Deine Antworten sollen kurz und prägnant sein. Hilf dem Nutzer bei Fragen zur Seite oder chatte einfach nett mit ihm."
                         },
                         {
                             "role": "user",
@@ -209,9 +218,12 @@ app.post('/api/chat', async (req, res) => {
                     }
                 });
 
+                const rawContent = aiRes.data.choices?.[0]?.message?.content || 'Ich bin da, aber sprachlos.';
+                const cleanContent = cleanAIResponse(rawContent);
+
                 return res.json({
                     success: true,
-                    content: aiRes.data.choices?.[0]?.message?.content || 'Ich bin da, aber sprachlos.'
+                    content: cleanContent
                 });
 
             } catch (err) {
@@ -390,36 +402,40 @@ ${truncatedText}`;
             });
         }
 
-        // --- AI GENERATION ---
-        const systemPrompt = `Du bist Finny, ein professioneller PDF-Assistent.
+        // --- AI GENERATION (Main Chat / Form Filling) ---
+        // Using the same simple structure as Support to ensure stability
+
+        const systemPrompt = `Du bist Finny, ein professioneller und freundlicher PDF-Assistent. 🦊
 Aktuelles Feld: "${currentField.name}" (${currentField.type || 'Text'})
 Fortschritt: ${activeFieldIndex + 1} von ${fields.length}.
 
 DEINE AUFGABE:
 1. Validiere die User-Eingabe "${lastUserMsg}" für das Feld "${currentField.name}".
-2. Wenn gültig: Bestätige kurz und nenne das NÄCHSTE Feld (${fields[activeFieldIndex + 1]?.name || 'Ende'}).
+2. Wenn gültig: Bestätige kurz ("✅ Gespeichert" o.ä.) und fordere zur Eingabe des NÄCHSTEN Feldes auf: "${fields[activeFieldIndex + 1]?.name || 'Das Formular ist nun vollständig!'}".
 3. Wenn ungültig: Erkläre freundlich den Fehler.
-4. Sei präzise. Keine Floskeln.
+4. Sei locker, nutze Emojis, aber bleib effizient.
 
 ANTWORT-FORMAT:
-"✅ [Wert] gespeichert. Nächstes Feld: [Name]..."`;
+Antworte direkt im Chat-Stil. Keine technischen Tags.`;
 
         const requestBody = {
             model: MODEL_NAME,
             messages: [
                 { role: 'system', content: systemPrompt },
                 ...messages.filter(m => m.role !== 'system') // User history
-            ],
-            temperature: 0.35,
-            max_tokens: 400
+            ]
         };
 
         const aiRes = await axios.post('https://api.cometapi.com/v1/chat/completions', requestBody, {
-            headers: { 'Authorization': `Bearer ${COMET_API_KEY}` },
+            headers: {
+                'Authorization': `Bearer ${COMET_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
             timeout: 30000
         });
 
-        let aiContent = aiRes.data.choices?.[0]?.message?.content || 'Entschuldigung, ich konnte das nicht verarbeiten.';
+        const rawContent = aiRes.data.choices?.[0]?.message?.content || 'Entschuldigung, ich konnte das nicht verarbeiten.';
+        const cleanContent = cleanAIResponse(rawContent);
 
         // Auto-Extract value mechanism (Simple heuristic override if AI confirms)
         // Check if AI says "Stored" or confirms valid
@@ -430,7 +446,7 @@ ANTWORT-FORMAT:
 
         return res.json({
             success: true,
-            content: aiContent,
+            content: cleanContent,
             fieldUpdates: { [currentField.name]: lastUserMsg } // Assume valid for now, usually AI prompts for retry if invalid
         });
 
