@@ -103,7 +103,7 @@ app.get('/api/health', (req, res) => {
         status: 'ok',
         env: {
             comet: !!process.env.VITE_COMET_API_KEY,
-            pdfco: !!process.env.VITE_PDFCO_API_KEY,
+            pdfco: !!process.env.VITE_PDF_CO_API_KEY,
             mode: process.env.NODE_ENV
         }
     });
@@ -401,35 +401,51 @@ app.post('/api/fill-pdf', async (req, res) => {
         let targetUrl = pdfUrl;
 
         // VARIANT B: Upload Temp File to PDF.co first if needed
-        if (!targetUrl && tempId) {
-            const filePath = path.join(UPLOAD_DIR, tempId);
-            if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, error: 'Original file lost' });
+if (!targetUrl && tempId) {
+    const filePath = path.join(UPLOAD_DIR, tempId);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, error: 'Original file lost' });
 
-            const formData = new FormData();
-            formData.append('file', fs.createReadStream(filePath));
+    // ✅ Base64 Upload (zuverlässiger)
+    const fileBuffer = fs.readFileSync(filePath);
+    const base64 = fileBuffer.toString('base64');
 
-            const uploadRes = await axios.post('https://api.pdf.co/v1/file/upload', formData, {
-                headers: { 'x-api-key': PDFCO_API_KEY, ...formData.getHeaders() }
-            });
-            if (uploadRes.data.error) throw new Error(uploadRes.data.message);
-            targetUrl = uploadRes.data.url;
+    const uploadRes = await axios.post('https://api.pdf.co/v1/file/upload/base64', {
+        file: base64,
+        name: tempId
+    }, {
+        headers: { 
+            'x-api-key': PDFCO_API_KEY,
+            'Content-Type': 'application/json'
         }
+    });
+
+    if (uploadRes.data.error) throw new Error(uploadRes.data.message);
+    targetUrl = uploadRes.data.url;
+}
 
         if (!targetUrl) return res.status(400).json({ success: false, error: 'No PDF source found' });
 
         // CALL PDF.CO FILL
         // Format fields for PDF.co values
-        const pdfCoFields = fields.map(f => ({
-            fieldName: f.name,
-            value: f.value?.toString() || ''
-        }));
+        const fieldsArray = [];
+let index = 1;
 
-        const fillRes = await axios.post('https://api.pdf.co/v1/pdf/edit/fill', {
-            url: targetUrl,
-            fields: pdfCoFields,
-            async: false
-        }, { headers: { 'x-api-key': PDFCO_API_KEY } });
+for (const field of fields) {
+    if (field.value && field.value.toString().trim()) {
+        fieldsArray.push(`${index};${field.name};${field.value}`);
+        index++;
+    }
+}
 
+const fieldsString = fieldsArray.join('|');
+
+Logger.info('FILL', `FieldsString: ${fieldsString}`);
+
+const fillRes = await axios.post('https://api.pdf.co/v1/pdf/edit/add', {
+    url: targetUrl,
+    fieldsString: fieldsString,  // ✅ Singular, nicht "fields"!
+    async: false
+}, { headers: { 'x-api-key': PDFCO_API_KEY } });
         if (fillRes.data.error) throw new Error(fillRes.data.message);
 
         // CLEANUP
