@@ -1,0 +1,146 @@
+.support-widget-container {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 9999;
+}
+
+.support-toggle-btn {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s;
+}
+
+.support-toggle-btn:hover {
+    background: var(--primary-dark);
+}
+
+.support-window {
+    position: absolute;
+    bottom: 4.5rem;
+    right: 0;
+    width: 300px;
+    height: 400px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.support-header {
+    background: var(--primary);
+    color: white;
+    padding: 0.8rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+}
+
+.support-header button {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    opacity: 0.8;
+}
+
+.support-header button:hover {
+    opacity: 1;
+}
+
+.support-messages {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    font-size: 0.9rem;
+}
+
+.support-message {
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.8rem;
+    max-width: 85%;
+    line-height: 1.4;
+}
+
+.support-message.system {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    align-self: flex-start;
+    font-style: italic;
+    font-size: 0.85rem;
+}
+
+.support-message.user {
+    background: var(--primary);
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 0.2rem;
+}
+
+.support-message.assistant {
+    background: var(--bg-secondary);
+    color: var(--text);
+    align-self: flex-start;
+    border-bottom-left-radius: 0.2rem;
+    border: 1px solid var(--border);
+}
+
+.support-message.error {
+    background: #ff4d4d20;
+    color: #ff4d4d;
+    align-self: center;
+    text-align: center;
+    border: 1px solid #ff4d4d;
+}
+
+.support-typing {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-left: 0.5rem;
+}
+
+.support-input {
+    padding: 0.8rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 0.5rem;
+}
+
+.support-input input {
+    flex: 1;
+    padding: 0.5rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+}
+
+.support-input button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}

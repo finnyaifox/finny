@@ -18,8 +18,6 @@ export default function Navbar({ currentPage, onNavigate, onUploadClick, status 
 
     const navItems = [
         { id: 'home', label: 'Startseite', icon: Home },
-        { id: 'home', label: 'Startseite', icon: Home },
-        // { id: 'full-ai', label: 'Full KI', icon: FileText }, // Moved to standalone link
         { id: 'features', label: 'Funktionen', icon: Info },
         { id: 'help', label: 'Hilfe', icon: HelpCircle },
     ];
@@ -63,6 +61,17 @@ export default function Navbar({ currentPage, onNavigate, onUploadClick, status 
                         </a>
                     );
                 })}
+
+                {/* Full KI Link - Integrated */}
+                <a
+                    className={`nav-link ${currentPage === 'full-ai' ? 'active' : ''}`}
+                    href="#"
+                    onClick={(e) => handleNavClick(e, 'full-ai')}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                    <FileText size={18} />
+                    <span>Full KI PDF - Assistent</span>
+                </a>
             </div>
 
             <div className="navbar-actions">
@@ -107,23 +116,12 @@ export default function Navbar({ currentPage, onNavigate, onUploadClick, status 
                     </motion.button>
                 )}
 
-                <a
-                    className="nav-link full-ki-link"
-                    href="/full-ki-mode.html"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setMenuOpen(false)}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                >
-                    <FileText size={18} />
-                    <span>PDF Assistent Full KI</span>
-                </a>
-
                 <button
                     className="navbar-theme-toggle"
                     onClick={() => {
-                        document.body.classList.toggle('dark-mode');
-                        const isDark = document.body.classList.contains('dark-mode');
+                        const body = document.body;
+                        body.classList.toggle('dark-mode');
+                        const isDark = body.classList.contains('dark-mode');
                         localStorage.setItem('finny_theme', isDark ? 'dark' : 'light');
                     }}
                     title="Design umschalten"
