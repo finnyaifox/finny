@@ -1,5 +1,21 @@
+import { useState, useRef, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { AppProvider, useApp } from './context/AppContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Navbar from './components/Navbar/Navbar';
+import Footer from './components/Footer/Footer';
+import LandingPage from './components/LandingPage/LandingPage';
+import UploadZone from './components/UploadZone/UploadZone';
+import Sidebar from './components/Sidebar/Sidebar';
+import ChatPanel from './components/Chat/ChatPanel';
+import PreviewModal from './components/Modal/PreviewModal';
+import DownloadModal from './components/Modal/DownloadModal';
+import HelpModal from './components/Modal/HelpModal';
+import AuthPage from './components/Auth/AuthPage';
+import MemberPage from './components/Auth/MemberPage';
 import FullAIWorkspace from './components/FullAI/FullAIWorkspace';
 import SupportWidget from './components/Support/SupportWidget';
+import './App.css';
 
 function AppContent() {
   const { status, filledPdfUrl, generatePdf, resetSession, uploadPdf, fields, startDemo, isDemo } = useApp();
