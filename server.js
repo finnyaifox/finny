@@ -18,6 +18,8 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000; // Render sets PORT automatically
+// App läuft hinter Render-Proxy → IPs aus X-Forwarded-For vertrauen
+app.set('trust proxy', 1);
 
 // ============================================
 // 🔒 SECURITY & CONFIG
@@ -102,10 +104,10 @@ app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
         env: {
-            comet: !!process.env.VITE_COMET_API_KEY,
-            pdfco: !!process.env.VITE_PDF_CO_API_KEY,
-            mode: process.env.NODE_ENV
-        }
+  comet: !!(process.env.COMET_API_KEY || process.env.VITE_COMET_API_KEY),
+  pdfco: !!(process.env.PDF_CO_API_KEY || process.env.VITE_PDF_CO_API_KEY),
+  mode: process.env.NODE_ENV
+}
     });
 });
 
