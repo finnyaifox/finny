@@ -44,11 +44,9 @@ const Logger = {
 };
 
 // API Keys
-// API Keys
-// API Keys
-const COMET_API_KEY = process.env.COMETAPI_KEY || process.env.VITE_COMET_API_KEY || 'sk-eQswrHDAMib6n6uxBXHWyZEd1ABdsAAY0JbuoXQ7Rxl1GkrZ';
+const COMET_API_KEY = process.env.COMET_API_KEY || process.env.VITE_COMET_API_KEY;
+const PDFCO_API_KEY = process.env.PDF_CO_API_KEY || process.env.VITE_PDF_CO_API_KEY;
 const MODEL_NAME = process.env.MODEL_NAME || "gemini-2.5-pro-all";
-const PDFCO_API_KEY = process.env.PDF_CO_API_KEY || process.env.VITE_PDFCO_API_KEY || 'leeonzo86@gmail.com_cYjsXcXA3N2FU2jD50NTtjbc4uhMQBtBHl5Wv8hN7GndcfgnQEu0W42g8oLyccos';
 
 // In-Memory Session Storage (For simplicity in this scale, use Redis in true prod)
 // We store session state mostly for "Variant A" guidance context if needed, 
