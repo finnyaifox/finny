@@ -240,4 +240,46 @@
         display: none;
     }
 }
-.navbar-theme-toggle { background: transparent; border: 1px solid var(--color-glass-border); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-left: 8px; transition: all 0.3s ease; position: relative; overflow: hidden; } .navbar-theme-toggle:hover { background: var(--color-glass-light); border-color: var(--color-primary); } .theme-icon-sun { display: none; } .theme-icon-moon { display: block; } body.dark-mode .theme-icon-sun { display: block; } body.dark-mode .theme-icon-moon { display: none; }
+
+/* Theme Toggle */
+.navbar-theme-toggle {
+    background: var(--color-glass);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin-left: var(--spacing-sm);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    z-index: 10;
+}
+
+.navbar-theme-toggle:hover {
+    background: var(--color-glass-light);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.theme-icon-sun {
+    font-size: 1.2rem;
+    display: none;
+}
+
+.theme-icon-moon {
+    font-size: 1.2rem;
+    display: block;
+}
+
+/* Toggle Logic based on Body Class */
+body.dark-mode .theme-icon-sun {
+    display: block;
+}
+
+body.dark-mode .theme-icon-moon {
+    display: none;
+}

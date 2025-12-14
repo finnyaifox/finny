@@ -143,7 +143,8 @@ const chatSchema = Joi.object({
     collectedData: Joi.object().optional(),
     // Variant B specifics
     isExtraction: Joi.boolean().optional(),
-    tempId: Joi.string().optional()
+    tempId: Joi.string().optional(),
+    isSupport: Joi.boolean().optional() // Allow Support Widget traffic
 });
 
 /**

@@ -178,6 +178,15 @@ export default function FullAIWorkspace() {
             <div className="full-ai-main">
                 {status === 'upload' && (
                     <div className="full-ai-upload">
+                        <motion.img
+                            src="/assets/finny-mascot.png"
+                            alt="Finny"
+                            className="full-ai-mascot"
+                            initial={{ y: 0 }}
+                            animate={{ y: [-10, 0, -10] }}
+                            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                            style={{ width: '120px', marginBottom: '1rem' }}
+                        />
                         <h2>Full KI Assistent</h2>
                         <p>Lade dein PDF hoch. Ich analysiere alles vollautomatisch.</p>
                         <div className="upload-box" onClick={() => document.getElementById('full-ai-upload').click()}>
