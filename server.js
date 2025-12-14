@@ -178,280 +178,190 @@ function cleanAIResponse(text) {
     return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 }
 
+// --- HELPER: Unified AI Call ---
+async function callAI(messages, systemInstruction = null) {
+    const payload = {
+        model: MODEL_NAME, // "gemini-2.5-pro-all"
+        messages: [
+            // Combine System Prompt into messages if provided
+            ...(systemInstruction ? [{ role: 'system', content: systemInstruction }] : []),
+            ...messages
+        ],
+        stream: false
+    };
+
+    console.log(`[AI-CALL] Sending ${payload.messages.length} msgs to ${MODEL_NAME}`);
+
+    try {
+        const aiRes = await axios.post('https://api.cometapi.com/v1/chat/completions', payload, {
+            headers: {
+                'Authorization': `Bearer ${COMET_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            timeout: 60000 // 60s for extraction/long processing
+        });
+
+        const raw = aiRes.data.choices?.[0]?.message?.content || '';
+        return cleanAIResponse(raw);
+
+    } catch (err) {
+        console.error('[AI-FAIL]', err.message, err.response?.data);
+        return null; // Signal failure
+    }
+}
+
 app.post('/api/chat', async (req, res) => {
     try {
-        // Validation
+        // Validation (simplified)
         const { error, value } = chatSchema.validate(req.body);
-        if (error) {
-            Logger.warn('CHAT', 'Validation Error', error.details);
-            return res.status(400).json({ success: false, error: 'Invalid Input' });
-        }
+        if (error) return res.status(400).json({ success: false, error: 'Invalid Input' });
 
         const { sessionId, messages, isExtraction, tempId, isSupport } = value;
         let { currentFieldIndex, collectedData } = value;
 
-        // --- VARIANT C: SUPPORT CHAT ---
+        // ==========================================
+        // 1. SUPPORT MODE
+        // ==========================================
         if (isSupport) {
             const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || '';
-            Logger.info('SUPPORT', `Request received: ${lastUserMsg}`);
+            Logger.info('SUPPORT', `Request: ${lastUserMsg}`);
 
-            try {
-                // Strict implementation of User's requested JSON structure
-                const requestBody = {
-                    "model": MODEL_NAME, // "gemini-2.5-pro-all"
-                    "messages": [
-                        {
-                            "role": "system",
-                            "content": "Du bist Finny, der freundliche KI-Support für diese Webseite. Antworte IMMER auf Deutsch. Sei locker, hilfreich und nutze gerne Emojis 😊. Deine Antworten sollen kurz und prägnant sein. Hilf dem Nutzer bei Fragen zur Seite oder chatte einfach nett mit ihm."
-                        },
-                        {
-                            "role": "user",
-                            "content": lastUserMsg
-                        }
-                    ]
-                };
+            const supportSystemPrompt = `Du bist Finny, der professionelle KI-Support für 'Finny Web Solutions'.
+KONTEXT: Du hilfst Usern bei ihren Web-Projekten (React, Node.js, Design).
+TONALITY: Freundlich, locker, professionell. Nutze Emojis (😊, 🚀). Sprich IMMER Deutsch.
+ANTWORTE: Kurz, präzise und lösungsorientiert.`;
 
-                const aiRes = await axios.post('https://api.cometapi.com/v1/chat/completions', requestBody, {
-                    headers: {
-                        'Authorization': `Bearer ${COMET_API_KEY}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
+            const reply = await callAI(
+                messages.filter(m => m.role !== 'system'),
+                supportSystemPrompt
+            );
 
-                const rawContent = aiRes.data.choices?.[0]?.message?.content || 'Ich bin da, aber sprachlos.';
-                const cleanContent = cleanAIResponse(rawContent);
-
-                return res.json({
-                    success: true,
-                    content: cleanContent
-                });
-
-            } catch (err) {
-                Logger.error('SUPPORT', 'Chat failed', err);
-                return res.json({
-                    success: true,
-                    content: "⚠️ Fehler bei der Verbindung zur KI. Bitte versuche es später."
-                });
-            }
+            return res.json({
+                success: true,
+                content: reply || "⚠️ Entschuldigung, ich habe gerade Verbindungsprobleme."
+            });
         }
 
-        // --- VARIANT B: EXTRACTION STAGE ---
+        // ==========================================
+        // 2. EXTRACTION MODE (Full KI)
+        // ==========================================
         if (isExtraction && tempId) {
-            Logger.info('CHAT', `Starting EXTRACTION (Text-Parsing) for tempId: ${tempId}`);
-
+            Logger.info('EXTRACT', `Processing TempID: ${tempId}`);
             const filePath = path.join(UPLOAD_DIR, tempId);
-            if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, error: 'Temp file not found' });
 
-            // 1. EXTRACT TEXT LOCALLY (pdf-parse)
-            // Equivalent to Python's PyPDF2 extraction
-            const fileBuffer = fs.readFileSync(filePath);
+            if (!fs.existsSync(filePath)) return res.json({ success: false, error: 'Datei nicht gefunden.' });
+
+            // A. Extract Text (pdf-parse)
             let pdfText = '';
-
             try {
-                // Dynamically import or require pdf-parse since it's CJS
-                // We use defaults for now, simple text extraction
+                const fileBuffer = fs.readFileSync(filePath);
                 const pdf = (await import('pdf-parse/lib/pdf-parse.js')).default;
                 const data = await pdf(fileBuffer);
-                pdfText = data.text;
-
-                if (!pdfText || !pdfText.strip()) {
-                    // Fallback check
-                    throw new Error('No text extracted');
-                }
-            } catch (pErr) {
-                Logger.warn('PARSE', 'Local parse failed/empty, falling back or error', pErr);
-                // If parse fails (scanned PDF?), we return error as per user example logic
-                return res.status(400).json({ success: false, error: 'Error: No text extracted from PDF. The file might be a scanned document or empty.' });
+                pdfText = data.text || '';
+            } catch (e) {
+                Logger.error('EXTRACT', 'PDF Parse Error', e);
+                return res.json({ success: false, error: 'Konnte Text nicht lesen (Scan?).' });
             }
 
-            // 2. BUILD PROMPT WITH TEXT
-            // User Logic: Limit to 10000 chars
-            const truncatedText = pdfText.substring(0, 10000);
+            // B. AI Analysis
+            const truncatedText = pdfText.substring(0, 15000); // 15k chars safety
+            const extractPrompt = `ANALYSE DIESES DOKUMENTS:
+${truncatedText}
 
-            const extractPrompt = `Du bist ein PDF-Experte. Deine Aufgabe ist es, alle Formularfelder aus dem folgenden Dokumenteninhalt zu extrahieren.
-Analysiere den Text und gib eine JSON-Liste aller Felder zurück.
-Format:
-[
-  {"fieldName": "Name", "type": "text"},
-  {"fieldName": "Vorname", "type": "text"},
-  ...
-]
-Gib NUR das JSON zurück. Nichts anderes.
+AUFGABE:
+Identifiziere alle relevanten Formular-Felder (Name, Datum, Unterschrift, Checkboxen etc.).
+Gib NUR ein JSON-Array zurück. Format:
+[{"fieldName": "Name", "type": "text"}, {"fieldName": "Geburtsdatum", "type": "date"}]
+Kein Markdown, nur JSON.`;
 
-Document Content:
-${truncatedText}`;
+            const aiResponse = await callAI([{ role: 'user', content: extractPrompt }]);
 
-            // 3. CALL API (CometAPI)
-            const requestBody = {
-                model: MODEL_NAME, // "gemini-2.5-pro-all"
-                messages: [
-                    { role: 'user', content: extractPrompt }
-                ],
-                stream: false
-            };
-
-            Logger.info('CHAT', 'Sending extraction request to AI...');
-
-            const aiRes = await axios.post('https://api.cometapi.com/v1/chat/completions', requestBody, {
-                headers: {
-                    'Authorization': `Bearer ${COMET_API_KEY}`,
-                    'Content-Type': 'application/json'
-                },
-                timeout: 30000 // 30s timeout
-            });
-
-            const content = aiRes.data.choices?.[0]?.message?.content || '';
-
-            // 4. PARSE AI RESPONSE
-            // Try to find JSON array in markdown
+            // C. Parse JSON
             let fields = [];
             try {
-                const jsonMatch = content.match(/\[.*\]/s);
-                if (jsonMatch) {
-                    fields = JSON.parse(jsonMatch[0]);
-                } else {
-                    // Fallback if no array found
-                    Logger.warn('EXTRACT', 'AI did not return JSON array', content);
-                    fields = [];
-                }
+                // Find JSON array in text (sometimes AI wraps in ```json ... ```)
+                const jsonMatch = aiResponse.match(/\[.*\]/s);
+                if (jsonMatch) fields = JSON.parse(jsonMatch[0]);
             } catch (e) {
-                Logger.error('EXTRACT', 'JSON Parse Error', e);
+                Logger.warn('EXTRACT', 'JSON Fail', aiResponse);
             }
 
-            // Save session
+            // Save basic session
             const newSessionId = `sess_${Date.now()}`;
             sessions.set(newSessionId, {
                 id: newSessionId,
                 fields,
                 collectedData: {},
                 currentFieldIndex: 0,
-                tempId,
-                pdfUrl: null // No URL yet, we have raw file
+                tempId
             });
 
             return res.json({
                 success: true,
                 fields,
                 sessionId: newSessionId,
-                message: `✅ Analyse abgeschlossen: ${fields.length} Felder im Text erkannt.`
+                message: fields.length > 0
+                    ? `✅ Analyse fertig! Ich habe ${fields.length} Felder gefunden. Sollen wir sie ausfüllen?`
+                    : "⚠️ Ich konnte keine Felder sicher erkennen. Aber wir können trotzdem chatten!"
             });
         }
 
-        // --- CHAT LOGIC (Variant A & B) ---
-        // Ensure session exists if we are mid-way
-        let session = sessionId ? sessions.get(sessionId) : null;
+        // ==========================================
+        // 3. FORM FILLING MODE (Standard Chat)
+        // ==========================================
 
-        // If Request sends explicit state (Variant A client-side state), use it
-        if (!session && collectedData && messages) {
-            // Stateless / Client-Managed State (Variant A)
+        // Reconstruct Context
+        let session = sessionId ? sessions.get(sessionId) : null;
+        if (!session && collectedData) {
+            // Client-side state fallback
             session = {
-                fields: req.body.fields || [], // Variant A often sends context logic in prompt, or we rely on client index
-                collectedData: collectedData || {},
-                currentFieldIndex: currentFieldIndex || 0
+                fields: req.body.context?.fields || [],
+                collectedData
             };
-            // Note: Variant A in current frontend logic manages state on Client. 
-            // We need to support that.
         }
 
-        // Identify current field for Context
-        // For Client-Side State: Field is passed in context or we deduce it?
-        // User's Prompt: "Du hast eine vorbereitete Liste... Dein Job ist User zu führen"
-        // Frontend `aiService.js` currently sends context with `fields`.
-
-        // Let's reconstruct the "Context" based on the request body provided by frontend
-        // Frontend sends: messages, context: { fields, filledFields, fileName }
-        // We map this to our internal logic
-
-        const clientContext = req.body.context || {}; // { fields, filledFields, fileName }
-        const fields = session?.fields || clientContext.fields || [];
-        const filledData = collectedData || clientContext.filledFields || {};
-        // Find first unfilled field or use explicit index
-        // We prefer explicit index if given, else derive
-        let activeFieldIndex = currentFieldIndex !== undefined ? currentFieldIndex : 0;
-
-        // Heuristic: Find first missing field if index not valid
-        if (!fields[activeFieldIndex] || filledData[fields[activeFieldIndex].name]) {
-            activeFieldIndex = fields.findIndex(f => !filledData[f.name]);
-            if (activeFieldIndex === -1) activeFieldIndex = fields.length; // All done
+        const fields = session?.fields || [];
+        // Determine active field
+        let activeFieldIndex = currentFieldIndex || 0;
+        // Simple heuristic search
+        if (fields.length > 0 && (!fields[activeFieldIndex] || collectedData[fields[activeFieldIndex].name])) {
+            activeFieldIndex = fields.findIndex(f => !collectedData[f.name]);
+            if (activeFieldIndex === -1) activeFieldIndex = fields.length;
         }
 
         const currentField = fields[activeFieldIndex];
         const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || '';
 
-        // --- CASE: ALL DONE ---
-        if (!currentField) {
-            return res.json({
-                success: true,
-                content: '🎉 Alle Felder sind ausgefüllt! Klicke bitte auf "Vorschau" oder "PDF erstellen" um abzuschließen.',
-                action: 'completed'
-            });
+        // If finished
+        if (!currentField && fields.length > 0) {
+            return res.json({ success: true, content: "🎉 Das Formular ist komplett! Klicke auf 'Fertigstellen'.", action: 'completed' });
         }
 
-        // --- CASE: INTRO ---
-        // Managed by Frontend usually, but if backend sees 0 messages:
-        // if (messages.length <= 1 && activeFieldIndex === 0) ... 
+        // System Prompt
+        const formSystemPrompt = `Du bist Finny, der PDF-Assistent. 🦊
+KONTEXT: Der User füllt ein Formular aus.
+AKTUELLES FELD: "${currentField ? currentField.name : 'Allgemein'}" (${currentField ? (currentField.type || 'Text') : 'Info'}).
+FORTSCHRITT: ${activeFieldIndex + 1} / ${fields.length}.
 
-        // --- COMMANDS ---
-        const lowerMsg = lastUserMsg.toLowerCase().trim();
-        if (['weiter', 'skip', 'überspringen'].includes(lowerMsg)) {
-            return res.json({
-                success: true,
-                content: `Okay, ich habe das Feld "${currentField.name}" übersprungen.`,
-                fieldUpdates: { [currentField.name]: '' }, // Mark as empty
-                action: 'skip'
-            });
-        }
+AUFGABE:
+1. Prüfe die Eingabe "${lastUserMsg}".
+2. Wenn sinnvoll: Bestätige kurz ("✅ Notiert") und frage nach dem NÄCHSTEN Feld.
+3. Wenn Quatsch: Hilf dem User.
+4. Sei kurz, locker und nutze Emojis.`;
 
-        // --- AI GENERATION (Main Chat / Form Filling) ---
-        // Using the same simple structure as Support to ensure stability
-
-        const systemPrompt = `Du bist Finny, ein professioneller und freundlicher PDF-Assistent. 🦊
-Aktuelles Feld: "${currentField.name}" (${currentField.type || 'Text'})
-Fortschritt: ${activeFieldIndex + 1} von ${fields.length}.
-
-DEINE AUFGABE:
-1. Validiere die User-Eingabe "${lastUserMsg}" für das Feld "${currentField.name}".
-2. Wenn gültig: Bestätige kurz ("✅ Gespeichert" o.ä.) und fordere zur Eingabe des NÄCHSTEN Feldes auf: "${fields[activeFieldIndex + 1]?.name || 'Das Formular ist nun vollständig!'}".
-3. Wenn ungültig: Erkläre freundlich den Fehler.
-4. Sei locker, nutze Emojis, aber bleib effizient.
-
-ANTWORT-FORMAT:
-Antworte direkt im Chat-Stil. Keine technischen Tags.`;
-
-        const requestBody = {
-            model: MODEL_NAME,
-            messages: [
-                { role: 'system', content: systemPrompt },
-                ...messages.filter(m => m.role !== 'system') // User history
-            ]
-        };
-
-        const aiRes = await axios.post('https://api.cometapi.com/v1/chat/completions', requestBody, {
-            headers: {
-                'Authorization': `Bearer ${COMET_API_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            timeout: 30000
-        });
-
-        const rawContent = aiRes.data.choices?.[0]?.message?.content || 'Entschuldigung, ich konnte das nicht verarbeiten.';
-        const cleanContent = cleanAIResponse(rawContent);
-
-        // Auto-Extract value mechanism (Simple heuristic override if AI confirms)
-        // Check if AI says "Stored" or confirms valid
-        // We trust the AI Response mostly, but we also want to return the 'fieldUpdates' key so the frontend updates state.
-        // Simple Logic: If it wasn't a "Help" command, we assume input is the value.
-        // Ideally we ask AI to produce JSON, but user wanted "Chat".
-        // Use the existing 'extractFieldValues' logic approach or just assume current input = current field value.
+        const reply = await callAI(
+            messages.filter(m => m.role !== 'system'),
+            formSystemPrompt
+        );
 
         return res.json({
             success: true,
-            content: cleanContent,
-            fieldUpdates: { [currentField.name]: lastUserMsg } // Assume valid for now, usually AI prompts for retry if invalid
+            content: reply || "...",
+            fieldUpdates: currentField ? { [currentField.name]: lastUserMsg } : {}
         });
 
     } catch (err) {
-        Logger.error('CHAT', 'Failed', err);
+        Logger.error('API', 'Global Error', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
