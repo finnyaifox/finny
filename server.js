@@ -82,6 +82,18 @@ const upload = multer({
 // 📨 API ENDPOINTS
 // ============================================
 
+// --- 0. Health Check ---
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        env: {
+            comet: !!process.env.VITE_COMET_API_KEY,
+            pdfco: !!process.env.VITE_PDFCO_API_KEY,
+            mode: process.env.NODE_ENV
+        }
+    });
+});
+
 // --- 1. Upload Temp PDF (Variant B) ---
 app.post('/api/upload-pdf-temp', upload.single('file'), (req, res) => {
     try {
