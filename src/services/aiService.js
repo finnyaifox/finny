@@ -3,7 +3,9 @@
  * Communicates with our Node.js backend (/api/chat)
  */
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = import.meta.env.DEV
+    ? 'http://localhost:3000/api' // Local: Force Port 3000
+    : '/api';                       // Prod: Relative Path (Render)
 
 /**
  * Sends messages to the backend for processing.

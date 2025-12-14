@@ -7,9 +7,11 @@ import '../Chat/ChatPanel.css'; // Reusing chat styles
 import '../Chat/ChatPanel.css'; // Reusing chat styles
 import './FullAIWorkspace.css'; // Specific styles
 
-// Explicit Backend Connection
+// Explicit Backend Connection (Dynamic)
 const api = axios.create({
-    baseURL: 'http://localhost:3000/api'
+    baseURL: import.meta.env.DEV
+        ? 'http://localhost:3000/api'
+        : '/api'
 });
 
 export default function FullAIWorkspace() {
